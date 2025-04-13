@@ -1,0 +1,2572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Comparison Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.5;
+        }
+        .textarea-container {
+            position: relative;
+        }
+        .textarea-container textarea {
+            resize: vertical;
+            min-height: 180px;
+            width: 100%;
+            font-family: 'Fira Code', monospace;
+            padding: 0.75rem;
+            line-height: 1.5;
+            border-radius: 0.375rem;
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .textarea-container textarea:focus {
+            outline: 2px solid #3b82f6;
+            border-color: #3b82f6;
+        }
+        .textarea-container .char-count {
+            position: absolute;
+            bottom: 0.25rem;
+            right: 0.5rem;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        .parameter-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .parameter-row input {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+        }
+        .parameter-row button {
+            margin-left: 0.5rem;
+        }
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            background-color: #1e293b;
+            color: white;
+            font-size: 0.875rem;
+            z-index: 50;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            opacity: 0;
+            transform: translateY(1rem);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .placeholder-highlight {
+            background-color: #dbeafe;
+            border-radius: 0.25rem;
+            padding: 0.125rem 0.25rem;
+            margin: 0 0.125rem;
+            color: #1e40af;
+            font-weight: 500;
+        }
+        .json-validation-error {
+            color: #ef4444;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        /* Dark mode styles */
+        .dark {
+            background-color: #1e293b;
+            color: #f1f5f9;
+        }
+        .dark .textarea-container textarea {
+            background-color: #0f172a;
+            border-color: #334155;
+            color: #f1f5f9;
+        }
+        .dark .parameter-row input {
+            background-color: #0f172a;
+            border-color: #334155;
+            color: #f1f5f9;
+        }
+        .dark .card {
+            background-color: #1e293b;
+            border-color: #334155;
+        }
+        .dark .bg-white {
+            background-color: #1e293b;
+        }
+        .dark .border-gray-200 {
+            border-color: #334155;
+        }
+        .dark .text-gray-700 {
+            color: #f1f5f9;
+        }
+        .dark .bg-gray-50 {
+            background-color: #0f172a;
+        }
+        .dark .placeholder-highlight {
+            background-color: #1e3a8a;
+            color: #dbeafe;
+        }
+        /* Additional styles for the response display */
+        .response-container {
+            padding: 1rem;
+            border-radius: 0.375rem;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            font-family: 'Fira Code', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .dark .response-container {
+            background-color: #0f172a;
+            border-color: #334155;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .loading-indicator {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #1e293b;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+        
+        .dark .btn-secondary {
+            background-color: #334155;
+            color: #f1f5f9;
+        }
+        
+        .dark .btn-secondary:hover {
+            background-color: #475569;
+        }
+        
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .btn-outline:hover {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .dark .btn-outline {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .dark .btn-outline:hover {
+            background-color: #3b82f6;
+            color: #f1f5f9;
+        }
+        
+        /* Specific styles for the placeholder format */
+        .placeholder-format {
+            display: inline-block;
+            background-color: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            margin: 0 0.25rem;
+        }
+        
+        .dark .placeholder-format {
+            background-color: #334155;
+        }
+        
+        /* Styles for delete buttons */
+        .delete-btn {
+            color: #ef4444;
+            border: 1px solid #ef4444;
+            background-color: transparent;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .delete-btn:hover {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .select-with-actions {
+            display: flex;
+            align-items: center;
+        }
+        
+        .select-with-actions select {
+            flex: 1;
+            margin-right: 0.5rem;
+        }
+        
+        /* Confirm delete modal */
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .confirm-modal-content {
+            background-color: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 450px;
+        }
+        
+        .dark .confirm-modal-content {
+            background-color: #1e293b;
+            color: #f1f5f9;
+        }
+        
+        /* Model selection styles */
+        .model-selection {
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px dashed #cbd5e1;
+            background-color: #f8fafc;
+        }
+        
+        .dark .model-selection {
+            background-color: #0f172a;
+            border-color: #334155;
+        }
+        
+        .model-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-800">
+    <div id="app" class="container mx-auto py-6 px-4">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-600">Prompt Comparison Tool</h1>
+            <div class="flex items-center space-x-2">
+                <button id="darkModeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                    <i class="fas fa-moon dark:hidden"></i>
+                    <i class="fas fa-sun hidden dark:block"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation and Configuration -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <!-- Category and Prompt Management -->
+            <div class="md:col-span-2 flex flex-col space-y-2">
+                <div class="flex items-center space-x-2 mb-2">
+                    <label class="font-medium text-gray-700 dark:text-gray-300">Category:</label>
+                    <div class="flex-grow flex items-center space-x-2">
+                        <select id="categorySelect" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                            <option value="">Select Category</option>
+                        </select>
+                        <button id="deleteCategoryBtn" class="delete-btn">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button id="newCategoryBtn" class="btn-outline flex items-center">
+                            <i class="fas fa-plus mr-1"></i> New
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label class="font-medium text-gray-700 dark:text-gray-300">Prompt:</label>
+                    <div class="flex-grow flex items-center space-x-2">
+                        <select id="promptSelect" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                            <option value="">Select Prompt</option>
+                        </select>
+                        <button id="deletePromptBtn" class="delete-btn">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button id="newPromptBtn" class="btn-outline flex items-center">
+                            <i class="fas fa-plus mr-1"></i> New
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Configuration -->
+            <div class="md:col-span-2 flex flex-col space-y-2">
+                <div class="flex items-center space-x-2 mb-2">
+                    <label class="font-medium text-gray-700 dark:text-gray-300">API Config:</label>
+                    <input id="baseURL" type="text" placeholder="Base URL (e.g., https://api.openai.com/v1)" 
+                        class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                </div>
+                <div class="flex space-x-2">
+                    <input id="apiKey" type="password" placeholder="API Key" 
+                        class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                    <input id="modelName" type="text" placeholder="Default Model Name (e.g., gpt-3.5-turbo)" 
+                        class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                    <button id="saveConfigBtn" class="btn-primary">
+                        Save Config
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Models Configuration -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Available Models</h3>
+                <button id="addModelBtn" class="btn-outline flex items-center text-sm">
+                    <i class="fas fa-plus mr-1"></i> Add Model
+                </button>
+            </div>
+            <div id="availableModelsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                <!-- Models will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Mode Tabs -->
+        <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+            <button id="editModeBtn" class="px-4 py-2 border-b-2 border-blue-500 font-medium text-blue-500">
+                Edit Mode
+            </button>
+            <button id="compareModeBtn" class="px-4 py-2 border-b-2 border-transparent font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                Compare Mode
+            </button>
+        </div>
+
+        <!-- Edit Mode Content -->
+        <div id="editModeContent">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Development Version</h2>
+                    <div class="flex space-x-2">
+                        <button id="saveAsStableBtn" class="btn-primary">
+                            Save as Stable
+                        </button>
+                        <button id="testBtn" class="btn-secondary">
+                            Test
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Model Selection for Dev Version -->
+                <div class="model-selection mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Model for Testing:</label>
+                    <select id="devModelSelect" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                        <!-- Models will be added here -->
+                    </select>
+                </div>
+
+                <!-- Prompts -->
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">System Prompt</label>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                Use <span class="placeholder-format">${variable}</span> for placeholders
+                            </div>
+                        </div>
+                        <div class="textarea-container">
+                            <textarea id="systemPrompt" class="custom-scrollbar" placeholder="Enter your system prompt here..."></textarea>
+                            <div class="char-count">0 characters</div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">User Prompt</label>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                Use <span class="placeholder-format">${variable}</span> for placeholders
+                            </div>
+                        </div>
+                        <div class="textarea-container">
+                            <textarea id="userPrompt" class="custom-scrollbar" placeholder="Enter your user prompt here..."></textarea>
+                            <div class="char-count">0 characters</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Parameters -->
+                <div class="mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Model Parameters</h3>
+                        <button id="addParameterBtn" class="btn-outline flex items-center text-sm">
+                            <i class="fas fa-plus mr-1"></i> Add Parameter
+                        </button>
+                    </div>
+                    <div id="parametersContainer" class="space-y-2">
+                        <!-- Parameters will be added here -->
+                        <div class="parameter-row">
+                            <input type="text" value="temperature" class="parameter-key" readonly>
+                            <input type="text" value="0.7" class="parameter-value">
+                            <button class="remove-parameter text-red-500 hover:text-red-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="parameter-row">
+                            <input type="text" value="top_p" class="parameter-key" readonly>
+                            <input type="text" value="1" class="parameter-value">
+                            <button class="remove-parameter text-red-500 hover:text-red-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Test Input Section -->
+                <div id="testInputSection" class="mt-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Test Input</h3>
+                        <div id="placeholderStatus" class="text-xs text-gray-500 dark:text-gray-400">
+                            No placeholders detected
+                        </div>
+                    </div>
+                    <div class="textarea-container">
+                        <textarea id="testInput" class="custom-scrollbar" placeholder='Enter JSON for placeholders: { "variable": "value" }'></textarea>
+                        <div class="json-validation-error hidden" id="jsonValidationError">Invalid JSON format</div>
+                    </div>
+                </div>
+
+                <!-- Response Section -->
+                <div id="responseSection" class="mt-6 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Response</h3>
+                        <div class="model-badge" id="responseModelBadge">model-name</div>
+                    </div>
+                    <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+                        <div id="responseStats"></div>
+                        <button id="copyResponseBtn" class="text-blue-500 hover:text-blue-700">
+                            <i class="fas fa-copy mr-1"></i> Copy
+                        </button>
+                    </div>
+                    <div id="responseContainer" class="response-container custom-scrollbar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compare Mode Content -->
+        <div id="compareModeContent" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Development Version -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Development Version</h2>
+                        <div class="model-selection">
+                            <select id="compareDevModelSelect" class="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                                <!-- Models will be added here -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">System Prompt</h3>
+                        <div id="compareDevSystemPrompt" class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 custom-scrollbar" style="white-space: pre-wrap; min-height: 100px; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">User Prompt</h3>
+                        <div id="compareDevUserPrompt" class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 custom-scrollbar" style="white-space: pre-wrap; min-height: 100px; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Parameters</h3>
+                        <div id="compareDevParams" class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700"></div>
+                    </div>
+                    
+                    <div id="compareDevResponseSection" class="hidden">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Response</h3>
+                            <div class="model-badge" id="compareDevModelBadge">model-name</div>
+                        </div>
+                        <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+                            <div id="compareDevResponseStats"></div>
+                        </div>
+                        <div id="compareDevResponseContainer" class="response-container custom-scrollbar"></div>
+                    </div>
+                </div>
+                
+                <!-- Stable Version -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Stable Version</h2>
+                        <div class="flex items-center">
+                            <select id="stableVersionSelect" class="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 mr-2">
+                                <option value="">Select Stable Version</option>
+                            </select>
+                            <button id="deleteStableVersionBtn" class="delete-btn">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="model-selection mb-4">
+                        <select id="compareStableModelSelect" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                            <!-- Models will be added here -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">System Prompt</h3>
+                        <div id="compareStableSystemPrompt" class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 custom-scrollbar" style="white-space: pre-wrap; min-height: 100px; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">User Prompt</h3>
+                        <div id="compareStableUserPrompt" class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 custom-scrollbar" style="white-space: pre-wrap; min-height: 100px; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Parameters</h3>
+                        <div id="compareStableParams" class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700"></div>
+                    </div>
+                    
+                    <div id="compareStableResponseSection" class="hidden">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Response</h3>
+                            <div class="model-badge" id="compareStableModelBadge">model-name</div>
+                        </div>
+                        <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+                            <div id="compareStableResponseStats"></div>
+                        </div>
+                        <div id="compareStableResponseContainer" class="response-container custom-scrollbar"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compare Controls -->
+            <div class="flex justify-center mt-6 space-x-4">
+                <div id="compareTestInputContainer" class="w-full max-w-2xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Test Input</h3>
+                        <div id="comparePlaceholderStatus" class="text-xs text-gray-500 dark:text-gray-400">
+                            Checking for placeholders...
+                        </div>
+                    </div>
+                    <div class="textarea-container mb-4">
+                        <textarea id="compareTestInput" class="custom-scrollbar" placeholder='Enter JSON for placeholders: { "variable": "value" }'></textarea>
+                        <div class="json-validation-error hidden" id="compareJsonValidationError">Invalid JSON format</div>
+                    </div>
+                    <div class="flex justify-center">
+                        <button id="runComparisonBtn" class="btn-primary">
+                            Compare Responses
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- New Category Modal -->
+        <div id="newCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Create New Category</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category Name</label>
+                    <input id="newCategoryName" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="Enter category name...">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelNewCategoryBtn" class="btn-secondary">Cancel</button>
+                    <button id="saveNewCategoryBtn" class="btn-primary">Create</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- New Prompt Modal -->
+        <div id="newPromptModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Create New Prompt</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Prompt Name</label>
+                    <input id="newPromptName" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="Enter prompt name...">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelNewPromptBtn" class="btn-secondary">Cancel</button>
+                    <button id="saveNewPromptBtn" class="btn-primary">Create</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Save Version Modal -->
+        <div id="saveVersionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Save Stable Version</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Version Name</label>
+                    <input id="versionName" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="Enter version name...">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description (optional)</label>
+                    <textarea id="versionDescription" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 custom-scrollbar" placeholder="Enter version description..."></textarea>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelSaveVersionBtn" class="btn-secondary">Cancel</button>
+                    <button id="confirmSaveVersionBtn" class="btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Parameter Modal -->
+        <div id="addParameterModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Add Parameter</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Parameter Name</label>
+                    <input id="newParameterName" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="e.g., max_tokens, frequency_penalty">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Parameter Value</label>
+                    <input id="newParameterValue" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="e.g., 2048, 0.5">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelAddParameterBtn" class="btn-secondary">Cancel</button>
+                    <button id="confirmAddParameterBtn" class="btn-primary">Add</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Model Modal -->
+        <div id="addModelModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Add Model</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Model Name</label>
+                    <input id="newModelName" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="e.g., gpt-4, gpt-3.5-turbo">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Display Name (optional)</label>
+                    <input id="newModelDisplayName" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="e.g., GPT-4, GPT-3.5">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelAddModelBtn" class="btn-secondary">Cancel</button>
+                    <button id="confirmAddModelBtn" class="btn-primary">Add</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Confirm Delete Modal -->
+        <div id="confirmDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Confirm Delete</h3>
+                <p id="confirmDeleteMessage" class="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete this item?</p>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelDeleteBtn" class="btn-secondary">Cancel</button>
+                    <button id="confirmDeleteBtn" class="btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Toast -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // State management
+            const state = {
+                categories: [],
+                prompts: {},
+                currentCategory: null,
+                currentPrompt: null,
+                apiConfig: {
+                    baseURL: 'https://api.openai.com/v1',
+                    apiKey: '',
+                    model: 'gpt-3.5-turbo'
+                },
+                models: [
+                    { id: 'gpt-3.5-turbo', displayName: 'GPT-3.5 Turbo' },
+                    { id: 'gpt-4', displayName: 'GPT-4' }
+                ],
+                currentDevModel: null, // For edit mode
+                currentCompareDevModel: null, // For compare mode
+                currentCompareStableModel: null, // For compare mode
+                darkMode: localStorage.getItem('darkMode') === 'true',
+                compareMode: false,
+                deleteTarget: null,
+                deleteType: null
+            };
+
+            // DOM elements
+            const elements = {
+                // Dark mode
+                darkModeToggle: document.getElementById('darkModeToggle'),
+                
+                // Category and prompt selection
+                categorySelect: document.getElementById('categorySelect'),
+                promptSelect: document.getElementById('promptSelect'),
+                newCategoryBtn: document.getElementById('newCategoryBtn'),
+                newPromptBtn: document.getElementById('newPromptBtn'),
+                deleteCategoryBtn: document.getElementById('deleteCategoryBtn'),
+                deletePromptBtn: document.getElementById('deletePromptBtn'),
+                
+                // API configuration
+                baseURL: document.getElementById('baseURL'),
+                apiKey: document.getElementById('apiKey'),
+                modelName: document.getElementById('modelName'),
+                saveConfigBtn: document.getElementById('saveConfigBtn'),
+                
+                // Model Management
+                availableModelsContainer: document.getElementById('availableModelsContainer'),
+                addModelBtn: document.getElementById('addModelBtn'),
+                
+                // Model selection for different modes
+                devModelSelect: document.getElementById('devModelSelect'),
+                compareDevModelSelect: document.getElementById('compareDevModelSelect'),
+                compareStableModelSelect: document.getElementById('compareStableModelSelect'),
+                
+                // Model badges for responses
+                responseModelBadge: document.getElementById('responseModelBadge'),
+                compareDevModelBadge: document.getElementById('compareDevModelBadge'),
+                compareStableModelBadge: document.getElementById('compareStableModelBadge'),
+                
+                // Mode switching
+                editModeBtn: document.getElementById('editModeBtn'),
+                compareModeBtn: document.getElementById('compareModeBtn'),
+                editModeContent: document.getElementById('editModeContent'),
+                compareModeContent: document.getElementById('compareModeContent'),
+                
+                // Development version
+                systemPrompt: document.getElementById('systemPrompt'),
+                userPrompt: document.getElementById('userPrompt'),
+                saveAsStableBtn: document.getElementById('saveAsStableBtn'),
+                testBtn: document.getElementById('testBtn'),
+                
+                // Parameters
+                parametersContainer: document.getElementById('parametersContainer'),
+                addParameterBtn: document.getElementById('addParameterBtn'),
+                
+                // Test input
+                testInputSection: document.getElementById('testInputSection'),
+                placeholderStatus: document.getElementById('placeholderStatus'),
+                testInput: document.getElementById('testInput'),
+                jsonValidationError: document.getElementById('jsonValidationError'),
+                
+                // Response
+                responseSection: document.getElementById('responseSection'),
+                responseStats: document.getElementById('responseStats'),
+                responseContainer: document.getElementById('responseContainer'),
+                copyResponseBtn: document.getElementById('copyResponseBtn'),
+                
+                // Comparison mode
+                stableVersionSelect: document.getElementById('stableVersionSelect'),
+                deleteStableVersionBtn: document.getElementById('deleteStableVersionBtn'),
+                compareDevSystemPrompt: document.getElementById('compareDevSystemPrompt'),
+                compareDevUserPrompt: document.getElementById('compareDevUserPrompt'),
+                compareDevParams: document.getElementById('compareDevParams'),
+                compareDevResponseSection: document.getElementById('compareDevResponseSection'),
+                compareDevResponseStats: document.getElementById('compareDevResponseStats'),
+                compareDevResponseContainer: document.getElementById('compareDevResponseContainer'),
+                
+                compareStableSystemPrompt: document.getElementById('compareStableSystemPrompt'),
+                compareStableUserPrompt: document.getElementById('compareStableUserPrompt'),
+                compareStableParams: document.getElementById('compareStableParams'),
+                compareStableResponseSection: document.getElementById('compareStableResponseSection'),
+                compareStableResponseStats: document.getElementById('compareStableResponseStats'),
+                compareStableResponseContainer: document.getElementById('compareStableResponseContainer'),
+                
+                compareTestInputContainer: document.getElementById('compareTestInputContainer'),
+                comparePlaceholderStatus: document.getElementById('comparePlaceholderStatus'),
+                compareTestInput: document.getElementById('compareTestInput'),
+                compareJsonValidationError: document.getElementById('compareJsonValidationError'),
+                runComparisonBtn: document.getElementById('runComparisonBtn'),
+                
+                // Modals
+                newCategoryModal: document.getElementById('newCategoryModal'),
+                newCategoryName: document.getElementById('newCategoryName'),
+                cancelNewCategoryBtn: document.getElementById('cancelNewCategoryBtn'),
+                saveNewCategoryBtn: document.getElementById('saveNewCategoryBtn'),
+                
+                newPromptModal: document.getElementById('newPromptModal'),
+                newPromptName: document.getElementById('newPromptName'),
+                cancelNewPromptBtn: document.getElementById('cancelNewPromptBtn'),
+                saveNewPromptBtn: document.getElementById('saveNewPromptBtn'),
+                
+                saveVersionModal: document.getElementById('saveVersionModal'),
+                versionName: document.getElementById('versionName'),
+                versionDescription: document.getElementById('versionDescription'),
+                cancelSaveVersionBtn: document.getElementById('cancelSaveVersionBtn'),
+                confirmSaveVersionBtn: document.getElementById('confirmSaveVersionBtn'),
+                
+                addParameterModal: document.getElementById('addParameterModal'),
+                newParameterName: document.getElementById('newParameterName'),
+                newParameterValue: document.getElementById('newParameterValue'),
+                cancelAddParameterBtn: document.getElementById('cancelAddParameterBtn'),
+                confirmAddParameterBtn: document.getElementById('confirmAddParameterBtn'),
+                
+                addModelModal: document.getElementById('addModelModal'),
+                newModelName: document.getElementById('newModelName'),
+                newModelDisplayName: document.getElementById('newModelDisplayName'),
+                cancelAddModelBtn: document.getElementById('cancelAddModelBtn'),
+                confirmAddModelBtn: document.getElementById('confirmAddModelBtn'),
+                
+                // Confirm Delete Modal
+                confirmDeleteModal: document.getElementById('confirmDeleteModal'),
+                confirmDeleteMessage: document.getElementById('confirmDeleteMessage'),
+                cancelDeleteBtn: document.getElementById('cancelDeleteBtn'),
+                confirmDeleteBtn: document.getElementById('confirmDeleteBtn'),
+                
+                // Toast
+                toast: document.getElementById('toast')
+            };
+
+            // Initialize the app
+            init();
+
+            function init() {
+                // Load data from localStorage
+                loadState();
+                
+                // Initialize UI
+                updateCategorySelect();
+                updatePromptSelect();
+                updateStableVersionSelect();
+                updateAvailableModels();
+                updateModelSelects();
+                setDarkMode(state.darkMode);
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                // Set initial values
+                elements.baseURL.value = state.apiConfig.baseURL;
+                elements.apiKey.value = state.apiConfig.apiKey;
+                elements.modelName.value = state.apiConfig.model;
+                
+                // Check for placeholders in initial prompts
+                updatePlaceholderStatus();
+                
+                // Set default models if not already set
+                if (!state.currentDevModel && state.models.length > 0) {
+                    state.currentDevModel = state.models[0].id;
+                }
+                if (!state.currentCompareDevModel && state.models.length > 0) {
+                    state.currentCompareDevModel = state.models[0].id;
+                }
+                if (!state.currentCompareStableModel && state.models.length > 0) {
+                    state.currentCompareStableModel = state.models[0].id;
+                }
+            }
+
+            function loadState() {
+                try {
+                    // Load categories
+                    const savedCategories = localStorage.getItem('promptCategories');
+                    if (savedCategories) {
+                        state.categories = JSON.parse(savedCategories);
+                    }
+                    
+                    // Load prompts
+                    const savedPrompts = localStorage.getItem('promptData');
+                    if (savedPrompts) {
+                        state.prompts = JSON.parse(savedPrompts);
+                    }
+                    
+                    // Load API config
+                    const savedConfig = localStorage.getItem('apiConfig');
+                    if (savedConfig) {
+                        state.apiConfig = JSON.parse(savedConfig);
+                    }
+                    
+                    // Load models
+                    const savedModels = localStorage.getItem('availableModels');
+                    if (savedModels) {
+                        state.models = JSON.parse(savedModels);
+                    }
+                    
+                    // Load current models
+                    state.currentDevModel = localStorage.getItem('currentDevModel') || (state.models.length > 0 ? state.models[0].id : null);
+                    state.currentCompareDevModel = localStorage.getItem('currentCompareDevModel') || (state.models.length > 0 ? state.models[0].id : null);
+                    state.currentCompareStableModel = localStorage.getItem('currentCompareStableModel') || (state.models.length > 0 ? state.models[0].id : null);
+                } catch (error) {
+                    console.error('Error loading data from localStorage:', error);
+                    showToast('Error loading saved data. Starting fresh.', 'error');
+                }
+            }
+
+            function saveState() {
+                try {
+                    localStorage.setItem('promptCategories', JSON.stringify(state.categories));
+                    localStorage.setItem('promptData', JSON.stringify(state.prompts));
+                    localStorage.setItem('apiConfig', JSON.stringify(state.apiConfig));
+                    localStorage.setItem('darkMode', state.darkMode);
+                    localStorage.setItem('availableModels', JSON.stringify(state.models));
+                    localStorage.setItem('currentDevModel', state.currentDevModel);
+                    localStorage.setItem('currentCompareDevModel', state.currentCompareDevModel);
+                    localStorage.setItem('currentCompareStableModel', state.currentCompareStableModel);
+                } catch (error) {
+                    console.error('Error saving data to localStorage:', error);
+                    showToast('Error saving data. Your changes may not persist.', 'error');
+                }
+            }
+
+            function setupEventListeners() {
+                // Dark mode toggle
+                elements.darkModeToggle.addEventListener('click', toggleDarkMode);
+                
+                // Category and prompt selection
+                elements.categorySelect.addEventListener('change', onCategoryChange);
+                elements.promptSelect.addEventListener('change', onPromptChange);
+                elements.newCategoryBtn.addEventListener('click', showNewCategoryModal);
+                elements.newPromptBtn.addEventListener('click', showNewPromptModal);
+                elements.deleteCategoryBtn.addEventListener('click', showDeleteCategoryConfirm);
+                elements.deletePromptBtn.addEventListener('click', showDeletePromptConfirm);
+                elements.deleteStableVersionBtn.addEventListener('click', showDeleteStableVersionConfirm);
+                
+                // API configuration
+                elements.saveConfigBtn.addEventListener('click', saveApiConfig);
+                
+                // Model selection
+                elements.devModelSelect.addEventListener('change', (e) => {
+                    state.currentDevModel = e.target.value;
+                    saveState();
+                });
+                
+                elements.compareDevModelSelect.addEventListener('change', (e) => {
+                    state.currentCompareDevModel = e.target.value;
+                    saveState();
+                });
+                
+                elements.compareStableModelSelect.addEventListener('change', (e) => {
+                    state.currentCompareStableModel = e.target.value;
+                    saveState();
+                });
+                
+                // Model management
+                elements.addModelBtn.addEventListener('click', showAddModelModal);
+                
+                // Mode switching
+                elements.editModeBtn.addEventListener('click', () => switchMode(false));
+                elements.compareModeBtn.addEventListener('click', () => switchMode(true));
+                
+                // Development version
+                elements.systemPrompt.addEventListener('input', (e) => {
+                    updateCharCount(e.target);
+                    saveDevelopmentVersion();
+                    updatePlaceholderStatus();
+                });
+                elements.userPrompt.addEventListener('input', (e) => {
+                    updateCharCount(e.target);
+                    saveDevelopmentVersion();
+                    updatePlaceholderStatus();
+                });
+                elements.saveAsStableBtn.addEventListener('click', showSaveVersionModal);
+                elements.testBtn.addEventListener('click', testPrompt);
+                
+                // Parameters
+                elements.addParameterBtn.addEventListener('click', showAddParameterModal);
+                document.querySelectorAll('.remove-parameter').forEach(btn => {
+                    btn.addEventListener('click', removeParameter);
+                });
+                
+                // Test input
+                elements.testInput.addEventListener('input', validateJsonInput);
+                
+                // Response
+                elements.copyResponseBtn.addEventListener('click', copyResponse);
+                
+                // Comparison mode
+                elements.stableVersionSelect.addEventListener('change', updateComparisonView);
+                elements.compareTestInput.addEventListener('input', () => validateJsonInput(null, true));
+                elements.runComparisonBtn.addEventListener('click', runComparison);
+                
+                // Modals
+                elements.cancelNewCategoryBtn.addEventListener('click', hideNewCategoryModal);
+                elements.saveNewCategoryBtn.addEventListener('click', createNewCategory);
+                
+                elements.cancelNewPromptBtn.addEventListener('click', hideNewPromptModal);
+                elements.saveNewPromptBtn.addEventListener('click', createNewPrompt);
+                
+                elements.cancelSaveVersionBtn.addEventListener('click', hideSaveVersionModal);
+                elements.confirmSaveVersionBtn.addEventListener('click', saveStableVersion);
+                
+                elements.cancelAddParameterBtn.addEventListener('click', hideAddParameterModal);
+                elements.confirmAddParameterBtn.addEventListener('click', addParameter);
+                
+                elements.cancelAddModelBtn.addEventListener('click', hideAddModelModal);
+                elements.confirmAddModelBtn.addEventListener('click', addModel);
+                
+                // Confirm Delete Modal
+                elements.cancelDeleteBtn.addEventListener('click', hideConfirmDeleteModal);
+                elements.confirmDeleteBtn.addEventListener('click', executeDelete);
+                
+                // Initial character counts
+                updateCharCount(elements.systemPrompt);
+                updateCharCount(elements.userPrompt);
+            }
+
+            function updateCategorySelect() {
+                // Clear current options
+                elements.categorySelect.innerHTML = '<option value="">Select Category</option>';
+                
+                // Add options for each category
+                state.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    elements.categorySelect.appendChild(option);
+                });
+                
+                // Set current category if there is one
+                if (state.currentCategory) {
+                    elements.categorySelect.value = state.currentCategory;
+                }
+                
+                // Show/hide delete button based on selection
+                elements.deleteCategoryBtn.style.visibility = state.currentCategory ? 'visible' : 'hidden';
+            }
+
+            function updatePromptSelect() {
+                // Clear current options
+                elements.promptSelect.innerHTML = '<option value="">Select Prompt</option>';
+                
+                // If no category is selected, return
+                if (!state.currentCategory) return;
+                
+                // Get prompts for the current category
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                
+                // Add options for each prompt
+                categoryPrompts.forEach(prompt => {
+                    const option = document.createElement('option');
+                    option.value = prompt.id;
+                    option.textContent = prompt.name;
+                    elements.promptSelect.appendChild(option);
+                });
+                
+                // Set current prompt if there is one
+                if (state.currentPrompt) {
+                    elements.promptSelect.value = state.currentPrompt;
+                }
+                
+                // Show/hide delete button based on selection
+                elements.deletePromptBtn.style.visibility = state.currentPrompt ? 'visible' : 'hidden';
+            }
+
+            function updateStableVersionSelect() {
+                // Clear current options
+                elements.stableVersionSelect.innerHTML = '<option value="">Select Stable Version</option>';
+                
+                // If no prompt is selected, return
+                if (!state.currentCategory || !state.currentPrompt) return;
+                
+                // Get the current prompt
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const currentPrompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                
+                if (!currentPrompt) return;
+                
+                // Add options for each stable version
+                const stableVersions = currentPrompt.stableVersions || [];
+                stableVersions.forEach(version => {
+                    const option = document.createElement('option');
+                    option.value = version.id;
+                    option.textContent = version.name;
+                    elements.stableVersionSelect.appendChild(option);
+                });
+                
+                // Show/hide delete button based on selection
+                const stableVersionId = elements.stableVersionSelect.value;
+                elements.deleteStableVersionBtn.style.visibility = stableVersionId ? 'visible' : 'hidden';
+            }
+
+            function updateAvailableModels() {
+                // Clear current models
+                elements.availableModelsContainer.innerHTML = '';
+                
+                // Add each model
+                state.models.forEach(model => {
+                    const modelCard = document.createElement('div');
+                    modelCard.className = 'flex justify-between items-center p-2 border border-gray-200 dark:border-gray-700 rounded';
+                    
+                    const modelInfo = document.createElement('div');
+                    modelInfo.innerHTML = `
+                        <div class="font-medium">${model.displayName || model.id}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">${model.id}</div>
+                    `;
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                    deleteBtn.dataset.modelId = model.id;
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        showDeleteModelConfirm(model.id);
+                    });
+                    
+                    modelCard.appendChild(modelInfo);
+                    modelCard.appendChild(deleteBtn);
+                    
+                    elements.availableModelsContainer.appendChild(modelCard);
+                });
+            }
+
+            function updateModelSelects() {
+                // Clear current options
+                elements.devModelSelect.innerHTML = '';
+                elements.compareDevModelSelect.innerHTML = '';
+                elements.compareStableModelSelect.innerHTML = '';
+                
+                // Add options for each model
+                state.models.forEach(model => {
+                    const displayName = model.displayName || model.id;
+                    
+                    const devOption = document.createElement('option');
+                    devOption.value = model.id;
+                    devOption.textContent = displayName;
+                    elements.devModelSelect.appendChild(devOption);
+                    
+                    const compareDevOption = document.createElement('option');
+                    compareDevOption.value = model.id;
+                    compareDevOption.textContent = displayName;
+                    elements.compareDevModelSelect.appendChild(compareDevOption);
+                    
+                    const compareStableOption = document.createElement('option');
+                    compareStableOption.value = model.id;
+                    compareStableOption.textContent = displayName;
+                    elements.compareStableModelSelect.appendChild(compareStableOption);
+                });
+                
+                // Set current values
+                if (state.currentDevModel) {
+                    elements.devModelSelect.value = state.currentDevModel;
+                }
+                
+                if (state.currentCompareDevModel) {
+                    elements.compareDevModelSelect.value = state.currentCompareDevModel;
+                }
+                
+                if (state.currentCompareStableModel) {
+                    elements.compareStableModelSelect.value = state.currentCompareStableModel;
+                }
+            }
+
+            function onCategoryChange() {
+                const categoryId = elements.categorySelect.value;
+                state.currentCategory = categoryId;
+                state.currentPrompt = null;
+                
+                // Update prompt select
+                updatePromptSelect();
+                
+                // Update stable version select
+                updateStableVersionSelect();
+                
+                // Clear the prompt editor
+                clearPromptEditor();
+                
+                // Show/hide delete button based on selection
+                elements.deleteCategoryBtn.style.visibility = categoryId ? 'visible' : 'hidden';
+                elements.deletePromptBtn.style.visibility = 'hidden';
+                
+                saveState();
+            }
+
+            function onPromptChange() {
+                const promptId = elements.promptSelect.value;
+                state.currentPrompt = promptId;
+                
+                // Update the editor with the selected prompt
+                loadPromptToEditor();
+                
+                // Update stable version select
+                updateStableVersionSelect();
+                
+                // Show/hide delete button based on selection
+                elements.deletePromptBtn.style.visibility = promptId ? 'visible' : 'hidden';
+                
+                saveState();
+            }
+
+            function loadPromptToEditor() {
+                if (!state.currentCategory || !state.currentPrompt) {
+                    clearPromptEditor();
+                    return;
+                }
+                
+                // Get the current prompt
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const currentPrompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                
+                if (!currentPrompt) {
+                    clearPromptEditor();
+                    return;
+                }
+                
+                // Load development version
+                const devVersion = currentPrompt.developmentVersion || {
+                    systemPrompt: '',
+                    userPrompt: '',
+                    parameters: [
+                        { key: 'temperature', value: '0.7' },
+                        { key: 'top_p', value: '1' }
+                    ]
+                };
+                
+                // Set the editor values
+                elements.systemPrompt.value = devVersion.systemPrompt || '';
+                elements.userPrompt.value = devVersion.userPrompt || '';
+                
+                // Update character counts
+                updateCharCount(elements.systemPrompt);
+                updateCharCount(elements.userPrompt);
+                
+                // Set parameters
+                updateParametersUI(devVersion.parameters || []);
+                
+                // Check for placeholders
+                updatePlaceholderStatus();
+            }
+
+            function clearPromptEditor() {
+                elements.systemPrompt.value = '';
+                elements.userPrompt.value = '';
+                
+                // Reset parameters to defaults
+                updateParametersUI([
+                    { key: 'temperature', value: '0.7' },
+                    { key: 'top_p', value: '1' }
+                ]);
+                
+                // Hide response section
+                elements.responseSection.classList.add('hidden');
+                
+                // Update character counts
+                updateCharCount(elements.systemPrompt);
+                updateCharCount(elements.userPrompt);
+                
+                // Update placeholder status
+                updatePlaceholderStatus();
+            }
+
+            function updateParametersUI(parameters) {
+                // Clear current parameters
+                elements.parametersContainer.innerHTML = '';
+                
+                // Add each parameter
+                parameters.forEach(param => {
+                    const paramRow = document.createElement('div');
+                    paramRow.className = 'parameter-row';
+                    
+                    const keyInput = document.createElement('input');
+                    keyInput.type = 'text';
+                    keyInput.value = param.key;
+                    keyInput.className = 'parameter-key';
+                    keyInput.readOnly = true;
+                    
+                    const valueInput = document.createElement('input');
+                    valueInput.type = 'text';
+                    valueInput.value = param.value;
+                    valueInput.className = 'parameter-value';
+                    valueInput.addEventListener('input', saveDevelopmentVersion);
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-parameter text-red-500 hover:text-red-700';
+                    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    removeBtn.addEventListener('click', removeParameter);
+                    
+                    paramRow.appendChild(keyInput);
+                    paramRow.appendChild(valueInput);
+                    paramRow.appendChild(removeBtn);
+                    
+                    elements.parametersContainer.appendChild(paramRow);
+                });
+            }
+
+            function saveDevelopmentVersion() {
+                if (!state.currentCategory || !state.currentPrompt) return;
+                
+                // Get the current parameters
+                const parameters = [];
+                document.querySelectorAll('.parameter-row').forEach(row => {
+                    const key = row.querySelector('.parameter-key').value;
+                    const value = row.querySelector('.parameter-value').value;
+                    parameters.push({ key, value });
+                });
+                
+                // Create development version
+                const devVersion = {
+                    systemPrompt: elements.systemPrompt.value,
+                    userPrompt: elements.userPrompt.value,
+                    parameters
+                };
+                
+                // Save to the current prompt
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const promptIndex = categoryPrompts.findIndex(p => p.id === state.currentPrompt);
+                
+                if (promptIndex !== -1) {
+                    categoryPrompts[promptIndex].developmentVersion = devVersion;
+                    saveState();
+                }
+            }
+
+            function showNewCategoryModal() {
+                elements.newCategoryName.value = '';
+                elements.newCategoryModal.classList.remove('hidden');
+            }
+
+            function hideNewCategoryModal() {
+                elements.newCategoryModal.classList.add('hidden');
+            }
+
+            function createNewCategory() {
+                const categoryName = elements.newCategoryName.value.trim();
+                
+                if (!categoryName) {
+                    showToast('Category name cannot be empty', 'error');
+                    return;
+                }
+                
+                // Check if category already exists
+                if (state.categories.some(c => c.name === categoryName)) {
+                    showToast('A category with this name already exists', 'error');
+                    return;
+                }
+                
+                // Create new category
+                const newCategory = {
+                    id: generateId(),
+                    name: categoryName
+                };
+                
+                // Add to state
+                state.categories.push(newCategory);
+                state.currentCategory = newCategory.id;
+                state.currentPrompt = null;
+                
+                // Initialize prompts for this category
+                state.prompts[newCategory.id] = [];
+                
+                // Update UI
+                updateCategorySelect();
+                updatePromptSelect();
+                clearPromptEditor();
+                
+                // Save state
+                saveState();
+                
+                // Hide modal
+                hideNewCategoryModal();
+                
+                // Show toast
+                showToast(`Category "${categoryName}" created`);
+            }
+
+            function showNewPromptModal() {
+                if (!state.currentCategory) {
+                    showToast('Please select a category first', 'error');
+                    return;
+                }
+                
+                elements.newPromptName.value = '';
+                elements.newPromptModal.classList.remove('hidden');
+            }
+
+            function hideNewPromptModal() {
+                elements.newPromptModal.classList.add('hidden');
+            }
+
+            function createNewPrompt() {
+                const promptName = elements.newPromptName.value.trim();
+                
+                if (!promptName) {
+                    showToast('Prompt name cannot be empty', 'error');
+                    return;
+                }
+                
+                // Check if prompt already exists in this category
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                if (categoryPrompts.some(p => p.name === promptName)) {
+                    showToast('A prompt with this name already exists in this category', 'error');
+                    return;
+                }
+                
+                // Create new prompt
+                const newPrompt = {
+                    id: generateId(),
+                    name: promptName,
+                    developmentVersion: {
+                        systemPrompt: '',
+                        userPrompt: '',
+                        parameters: [
+                            { key: 'temperature', value: '0.7' },
+                            { key: 'top_p', value: '1' }
+                        ]
+                    },
+                    stableVersions: []
+                };
+                
+                // Add to state
+                if (!state.prompts[state.currentCategory]) {
+                    state.prompts[state.currentCategory] = [];
+                }
+                
+                state.prompts[state.currentCategory].push(newPrompt);
+                state.currentPrompt = newPrompt.id;
+                
+                // Update UI
+                updatePromptSelect();
+                loadPromptToEditor();
+                
+                // Save state
+                saveState();
+                
+                // Hide modal
+                hideNewPromptModal();
+                
+                // Show toast
+                showToast(`Prompt "${promptName}" created`);
+            }
+
+            function showSaveVersionModal() {
+                if (!state.currentCategory || !state.currentPrompt) {
+                    showToast('Please select a prompt first', 'error');
+                    return;
+                }
+                
+                elements.versionName.value = '';
+                elements.versionDescription.value = '';
+                elements.saveVersionModal.classList.remove('hidden');
+            }
+
+            function hideSaveVersionModal() {
+                elements.saveVersionModal.classList.add('hidden');
+            }
+
+            function saveStableVersion() {
+                const versionName = elements.versionName.value.trim();
+                const versionDescription = elements.versionDescription.value.trim();
+                
+                if (!versionName) {
+                    showToast('Version name cannot be empty', 'error');
+                    return;
+                }
+                
+                if (!state.currentCategory || !state.currentPrompt) {
+                    showToast('No prompt selected', 'error');
+                    return;
+                }
+                
+                // Get the current prompt
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const promptIndex = categoryPrompts.findIndex(p => p.id === state.currentPrompt);
+                
+                if (promptIndex === -1) {
+                    showToast('Current prompt not found', 'error');
+                    return;
+                }
+                
+                const currentPrompt = categoryPrompts[promptIndex];
+                
+                // Check if version name already exists
+                if (currentPrompt.stableVersions && currentPrompt.stableVersions.some(v => v.name === versionName)) {
+                    showToast('A version with this name already exists', 'error');
+                    return;
+                }
+                
+                // Create new stable version
+                const newVersion = {
+                    id: generateId(),
+                    name: versionName,
+                    description: versionDescription,
+                    createdAt: new Date().toISOString(),
+                    categoryId: state.currentCategory, // Store category ID with the version
+                    ...currentPrompt.developmentVersion
+                };
+                
+                // Add to prompt
+                if (!currentPrompt.stableVersions) {
+                    currentPrompt.stableVersions = [];
+                }
+                
+                currentPrompt.stableVersions.push(newVersion);
+                
+                // Update UI
+                updateStableVersionSelect();
+                
+                // Save state
+                saveState();
+                
+                // Hide modal
+                hideSaveVersionModal();
+                
+                // Show toast
+                showToast(`Stable version "${versionName}" saved`);
+            }
+
+            function showAddParameterModal() {
+                elements.newParameterName.value = '';
+                elements.newParameterValue.value = '';
+                elements.addParameterModal.classList.remove('hidden');
+            }
+
+            function hideAddParameterModal() {
+                elements.addParameterModal.classList.add('hidden');
+            }
+
+            function showAddModelModal() {
+                elements.newModelName.value = '';
+                elements.newModelDisplayName.value = '';
+                elements.addModelModal.classList.remove('hidden');
+            }
+
+            function hideAddModelModal() {
+                elements.addModelModal.classList.add('hidden');
+            }
+
+            function addModel() {
+                const modelName = elements.newModelName.value.trim();
+                const displayName = elements.newModelDisplayName.value.trim();
+                
+                if (!modelName) {
+                    showToast('Model name cannot be empty', 'error');
+                    return;
+                }
+                
+                // Check if model already exists
+                if (state.models.some(m => m.id === modelName)) {
+                    showToast('This model already exists', 'error');
+                    return;
+                }
+                
+                // Create new model
+                const newModel = {
+                    id: modelName,
+                    displayName: displayName || modelName
+                };
+                
+                // Add to state
+                state.models.push(newModel);
+                
+                // Update UI
+                updateAvailableModels();
+                updateModelSelects();
+                
+                // Save state
+                saveState();
+                
+                // Hide modal
+                hideAddModelModal();
+                
+                // Show toast
+                showToast(`Model "${modelName}" added`);
+            }
+
+            function showDeleteModelConfirm(modelId) {
+                // Find the model
+                const model = state.models.find(m => m.id === modelId);
+                if (!model) {
+                    showToast('Model not found', 'error');
+                    return;
+                }
+                
+                // Set up confirm delete modal
+                state.deleteType = 'model';
+                state.deleteTarget = modelId;
+                elements.confirmDeleteMessage.textContent = `Are you sure you want to delete the model "${model.displayName || model.id}"?`;
+                
+                // Show modal
+                elements.confirmDeleteModal.classList.remove('hidden');
+            }
+
+            function deleteModel() {
+                const modelId = state.deleteTarget;
+                const modelIndex = state.models.findIndex(m => m.id === modelId);
+                
+                if (modelIndex === -1) {
+                    showToast('Model not found', 'error');
+                    return;
+                }
+                
+                // Get model name for the toast
+                const modelName = state.models[modelIndex].displayName || state.models[modelIndex].id;
+                
+                // Remove model
+                state.models.splice(modelIndex, 1);
+                
+                // If this was the selected model, reset to the first available
+                if (state.currentDevModel === modelId && state.models.length > 0) {
+                    state.currentDevModel = state.models[0].id;
+                } else if (state.models.length === 0) {
+                    state.currentDevModel = null;
+                }
+                
+                if (state.currentCompareDevModel === modelId && state.models.length > 0) {
+                    state.currentCompareDevModel = state.models[0].id;
+                } else if (state.models.length === 0) {
+                    state.currentCompareDevModel = null;
+                }
+                
+                if (state.currentCompareStableModel === modelId && state.models.length > 0) {
+                    state.currentCompareStableModel = state.models[0].id;
+                } else if (state.models.length === 0) {
+                    state.currentCompareStableModel = null;
+                }
+                
+                // Update UI
+                updateAvailableModels();
+                updateModelSelects();
+                
+                // Save state
+                saveState();
+                
+                // Show toast
+                showToast(`Model "${modelName}" deleted`);
+            }
+
+            function addParameter() {
+                const paramName = elements.newParameterName.value.trim();
+                const paramValue = elements.newParameterValue.value.trim();
+                
+                if (!paramName) {
+                    showToast('Parameter name cannot be empty', 'error');
+                    return;
+                }
+                
+                // Check if parameter already exists
+                const exists = Array.from(document.querySelectorAll('.parameter-key')).some(
+                    input => input.value === paramName
+                );
+                
+                if (exists) {
+                    showToast('This parameter already exists', 'error');
+                    return;
+                }
+                
+                // Create parameter row
+                const paramRow = document.createElement('div');
+                paramRow.className = 'parameter-row';
+                
+                const keyInput = document.createElement('input');
+                keyInput.type = 'text';
+                keyInput.value = paramName;
+                keyInput.className = 'parameter-key';
+                keyInput.readOnly = true;
+                
+                const valueInput = document.createElement('input');
+                valueInput.type = 'text';
+                valueInput.value = paramValue;
+                valueInput.className = 'parameter-value';
+                valueInput.addEventListener('input', saveDevelopmentVersion);
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-parameter text-red-500 hover:text-red-700';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.addEventListener('click', removeParameter);
+                
+                paramRow.appendChild(keyInput);
+                paramRow.appendChild(valueInput);
+                paramRow.appendChild(removeBtn);
+                
+                elements.parametersContainer.appendChild(paramRow);
+                
+                // Save development version
+                saveDevelopmentVersion();
+                
+                // Hide modal
+                hideAddParameterModal();
+                
+                // Show toast
+                showToast(`Parameter "${paramName}" added`);
+            }
+
+            function removeParameter(event) {
+                const paramRow = event.currentTarget.closest('.parameter-row');
+                const paramName = paramRow.querySelector('.parameter-key').value;
+                
+                // Remove from DOM
+                paramRow.remove();
+                
+                // Save development version
+                saveDevelopmentVersion();
+                
+                // Show toast
+                showToast(`Parameter "${paramName}" removed`);
+            }
+
+            function saveApiConfig() {
+                const baseURL = elements.baseURL.value.trim();
+                const apiKey = elements.apiKey.value.trim();
+                const model = elements.modelName.value.trim();
+                
+                if (!baseURL) {
+                    showToast('Base URL cannot be empty', 'error');
+                    return;
+                }
+                
+                if (!apiKey) {
+                    showToast('API Key cannot be empty', 'error');
+                    return;
+                }
+                
+                if (!model) {
+                    showToast('Model name cannot be empty', 'error');
+                    return;
+                }
+                
+                // Save to state
+                state.apiConfig = {
+                    baseURL,
+                    apiKey,
+                    model
+                };
+                
+                // Save state
+                saveState();
+                
+                // Show toast
+                showToast('API configuration saved');
+            }
+
+            function switchMode(compareMode) {
+                state.compareMode = compareMode;
+                
+                if (compareMode) {
+                    // Switch to compare mode
+                    elements.editModeBtn.classList.remove('border-blue-500', 'text-blue-500');
+                    elements.editModeBtn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                    
+                    elements.compareModeBtn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                    elements.compareModeBtn.classList.add('border-blue-500', 'text-blue-500');
+                    
+                    elements.editModeContent.classList.add('hidden');
+                    elements.compareModeContent.classList.remove('hidden');
+                    
+                    // Update comparison view
+                    updateComparisonView();
+                } else {
+                    // Switch to edit mode
+                    elements.compareModeBtn.classList.remove('border-blue-500', 'text-blue-500');
+                    elements.compareModeBtn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                    
+                    elements.editModeBtn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                    elements.editModeBtn.classList.add('border-blue-500', 'text-blue-500');
+                    
+                    elements.compareModeContent.classList.add('hidden');
+                    elements.editModeContent.classList.remove('hidden');
+                }
+            }
+
+            function updateComparisonView() {
+                if (!state.currentCategory || !state.currentPrompt) {
+                    return;
+                }
+                
+                // Get the current prompt
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const currentPrompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                
+                if (!currentPrompt) return;
+                
+                // Update development version view
+                const devVersion = currentPrompt.developmentVersion || {
+                    systemPrompt: '',
+                    userPrompt: '',
+                    parameters: []
+                };
+                
+                elements.compareDevSystemPrompt.textContent = devVersion.systemPrompt || '';
+                elements.compareDevUserPrompt.textContent = devVersion.userPrompt || '';
+                elements.compareDevParams.innerHTML = '';
+                
+                // Display parameters
+                devVersion.parameters.forEach(param => {
+                    const paramItem = document.createElement('div');
+                    paramItem.className = 'mb-1';
+                    paramItem.textContent = `${param.key}: ${param.value}`;
+                    elements.compareDevParams.appendChild(paramItem);
+                });
+                
+                // Hide dev response section
+                elements.compareDevResponseSection.classList.add('hidden');
+                
+                // Update stable version view if one is selected
+                const stableVersionId = elements.stableVersionSelect.value;
+                if (stableVersionId) {
+                    const stableVersion = currentPrompt.stableVersions.find(v => v.id === stableVersionId);
+                    
+                    if (stableVersion) {
+                        elements.compareStableSystemPrompt.textContent = stableVersion.systemPrompt || '';
+                        elements.compareStableUserPrompt.textContent = stableVersion.userPrompt || '';
+                        elements.compareStableParams.innerHTML = '';
+                        
+                        // Display parameters
+                        stableVersion.parameters.forEach(param => {
+                            const paramItem = document.createElement('div');
+                            paramItem.className = 'mb-1';
+                            paramItem.textContent = `${param.key}: ${param.value}`;
+                            elements.compareStableParams.appendChild(paramItem);
+                        });
+                    }
+                } else {
+                    elements.compareStableSystemPrompt.textContent = '';
+                    elements.compareStableUserPrompt.textContent = '';
+                    elements.compareStableParams.innerHTML = '';
+                }
+                
+                // Show/hide delete button based on selection
+                elements.deleteStableVersionBtn.style.visibility = stableVersionId ? 'visible' : 'hidden';
+                
+                // Hide stable response section
+                elements.compareStableResponseSection.classList.add('hidden');
+                
+                // Check for placeholders in both prompts
+                checkComparisonPlaceholders();
+            }
+
+            function updatePlaceholderStatus() {
+                const systemPrompt = elements.systemPrompt.value;
+                const userPrompt = elements.userPrompt.value;
+                
+                // Check for placeholders
+                const placeholders = extractPlaceholders(systemPrompt, userPrompt);
+                
+                if (placeholders.length > 0) {
+                    elements.placeholderStatus.textContent = `Found placeholders: ${placeholders.join(', ')}`;
+                    elements.testInputSection.classList.remove('hidden');
+                } else {
+                    elements.placeholderStatus.textContent = 'No placeholders detected';
+                    // Don't hide the test input section, just indicate it's optional
+                }
+            }
+
+            function checkComparisonPlaceholders() {
+                const systemPromptDev = elements.compareDevSystemPrompt.textContent;
+                const userPromptDev = elements.compareDevUserPrompt.textContent;
+                
+                const systemPromptStable = elements.compareStableSystemPrompt.textContent;
+                const userPromptStable = elements.compareStableUserPrompt.textContent;
+                
+                // Check for placeholders in both versions
+                const placeholdersDev = extractPlaceholders(systemPromptDev, userPromptDev);
+                const placeholdersStable = extractPlaceholders(systemPromptStable, userPromptStable);
+                
+                // Combine unique placeholders
+                const allPlaceholders = [...new Set([...placeholdersDev, ...placeholdersStable])];
+                
+                if (allPlaceholders.length > 0) {
+                    elements.comparePlaceholderStatus.textContent = `Found placeholders: ${allPlaceholders.join(', ')}`;
+                } else {
+                    elements.comparePlaceholderStatus.textContent = 'No placeholders detected';
+                    // Don't hide the test input, just indicate it's optional
+                }
+            }
+
+            function extractPlaceholders(systemPrompt, userPrompt) {
+                const regex = /\${([^}]+)}/g;
+                const placeholders = [];
+                
+                // Extract from system prompt
+                let match;
+                while ((match = regex.exec(systemPrompt)) !== null) {
+                    placeholders.push(match[1]);
+                }
+                
+                // Reset regex
+                regex.lastIndex = 0;
+                
+                // Extract from user prompt
+                while ((match = regex.exec(userPrompt)) !== null) {
+                    placeholders.push(match[1]);
+                }
+                
+                // Return unique placeholders
+                return [...new Set(placeholders)];
+            }
+
+            function validateJsonInput(event, isCompare = false) {
+                const inputElement = isCompare ? elements.compareTestInput : elements.testInput;
+                const errorElement = isCompare ? elements.compareJsonValidationError : elements.jsonValidationError;
+                
+                const jsonStr = inputElement.value.trim();
+                
+                // If empty, hide error
+                if (!jsonStr) {
+                    errorElement.classList.add('hidden');
+                    return true;
+                }
+                
+                try {
+                    JSON.parse(jsonStr);
+                    errorElement.classList.add('hidden');
+                    return true;
+                } catch (error) {
+                    errorElement.textContent = 'Invalid JSON format';
+                    errorElement.classList.remove('hidden');
+                    return false;
+                }
+            }
+
+            function applyPlaceholders(text, placeholderValues) {
+                if (!text || !placeholderValues) return text;
+                
+                return text.replace(/\${([^}]+)}/g, (match, placeholder) => {
+                    return placeholderValues[placeholder] !== undefined 
+                        ? placeholderValues[placeholder] 
+                        : match;
+                });
+            }
+
+            async function testPrompt() {
+                if (!state.currentCategory || !state.currentPrompt) {
+                    showToast('Please select a prompt first', 'error');
+                    return;
+                }
+                
+                // Get placeholder values
+                let placeholderValues = {};
+                const jsonStr = elements.testInput.value.trim();
+                
+                if (jsonStr) {
+                    try {
+                        placeholderValues = JSON.parse(jsonStr);
+                    } catch (error) {
+                        showToast('Invalid JSON in test input', 'error');
+                        return;
+                    }
+                }
+                
+                // Get the current prompt
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const currentPrompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                
+                if (!currentPrompt || !currentPrompt.developmentVersion) {
+                    showToast('Development version not found', 'error');
+                    return;
+                }
+                
+                const devVersion = currentPrompt.developmentVersion;
+                
+                // Apply placeholders
+                const systemPrompt = applyPlaceholders(devVersion.systemPrompt, placeholderValues);
+                const userPrompt = applyPlaceholders(devVersion.userPrompt, placeholderValues);
+                
+                // Get parameters
+                const parameters = {};
+                devVersion.parameters.forEach(param => {
+                    if (param.value.trim()) {
+                        // Try to parse as number or boolean if possible
+                        let value = param.value;
+                        if (value === 'true') value = true;
+                        else if (value === 'false') value = false;
+                        else if (!isNaN(value) && value.trim() !== '') value = parseFloat(value);
+                        
+                        parameters[param.key] = value;
+                    }
+                });
+                
+                // Get selected model
+                const selectedModel = elements.devModelSelect.value;
+                
+                // Update model badge
+                const modelDisplayName = state.models.find(m => m.id === selectedModel)?.displayName || selectedModel;
+                elements.responseModelBadge.textContent = modelDisplayName;
+                
+                // Show loading state
+                elements.responseContainer.innerHTML = '<div class="flex justify-center my-4"><div class="loading-indicator"></div> Generating response...</div>';
+                elements.responseSection.classList.remove('hidden');
+                elements.responseStats.textContent = 'Processing...';
+                
+                const startTime = performance.now();
+                
+                try {
+                    // Make API request with the selected model
+                    const response = await callApi(systemPrompt, userPrompt, parameters, selectedModel);
+                    
+                    const endTime = performance.now();
+                    const duration = ((endTime - startTime) / 1000).toFixed(2);
+                    
+                    // Update response UI
+                    elements.responseStats.textContent = `Completed in ${duration}s`;
+                    elements.responseContainer.textContent = response;
+                    elements.responseSection.classList.remove('hidden');
+                } catch (error) {
+                    elements.responseStats.textContent = 'Error';
+                    elements.responseContainer.textContent = `Error: ${error.message}`;
+                    showToast('API request failed: ' + error.message, 'error');
+                }
+            }
+
+            async function runComparison() {
+                if (!state.currentCategory || !state.currentPrompt) {
+                    showToast('Please select a prompt first', 'error');
+                    return;
+                }
+                
+                const stableVersionId = elements.stableVersionSelect.value;
+                if (!stableVersionId) {
+                    showToast('Please select a stable version to compare', 'error');
+                    return;
+                }
+                
+                // Get placeholder values
+                let placeholderValues = {};
+                const jsonStr = elements.compareTestInput.value.trim();
+                
+                if (jsonStr) {
+                    try {
+                        placeholderValues = JSON.parse(jsonStr);
+                    } catch (error) {
+                        showToast('Invalid JSON in test input', 'error');
+                        return;
+                    }
+                }
+                
+                // Get the current prompt
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const currentPrompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                
+                if (!currentPrompt) {
+                    showToast('Current prompt not found', 'error');
+                    return;
+                }
+                
+                // Get development version
+                const devVersion = currentPrompt.developmentVersion;
+                if (!devVersion) {
+                    showToast('Development version not found', 'error');
+                    return;
+                }
+                
+                // Get stable version
+                const stableVersion = currentPrompt.stableVersions.find(v => v.id === stableVersionId);
+                if (!stableVersion) {
+                    showToast('Stable version not found', 'error');
+                    return;
+                }
+                
+                // Apply placeholders
+                const devSystemPrompt = applyPlaceholders(devVersion.systemPrompt, placeholderValues);
+                const devUserPrompt = applyPlaceholders(devVersion.userPrompt, placeholderValues);
+                
+                const stableSystemPrompt = applyPlaceholders(stableVersion.systemPrompt, placeholderValues);
+                const stableUserPrompt = applyPlaceholders(stableVersion.userPrompt, placeholderValues);
+                
+                // Get parameters
+                const devParameters = {};
+                devVersion.parameters.forEach(param => {
+                    if (param.value.trim()) {
+                        // Try to parse as number or boolean if possible
+                        let value = param.value;
+                        if (value === 'true') value = true;
+                        else if (value === 'false') value = false;
+                        else if (!isNaN(value) && value.trim() !== '') value = parseFloat(value);
+                        
+                        devParameters[param.key] = value;
+                    }
+                });
+                
+                const stableParameters = {};
+                stableVersion.parameters.forEach(param => {
+                    if (param.value.trim()) {
+                        // Try to parse as number or boolean if possible
+                        let value = param.value;
+                        if (value === 'true') value = true;
+                        else if (value === 'false') value = false;
+                        else if (!isNaN(value) && value.trim() !== '') value = parseFloat(value);
+                        
+                        stableParameters[param.key] = value;
+                    }
+                });
+                
+                // Get selected models
+                const devModel = elements.compareDevModelSelect.value;
+                const stableModel = elements.compareStableModelSelect.value;
+                
+                // Update model badges
+                const devModelDisplayName = state.models.find(m => m.id === devModel)?.displayName || devModel;
+                const stableModelDisplayName = state.models.find(m => m.id === stableModel)?.displayName || stableModel;
+                elements.compareDevModelBadge.textContent = devModelDisplayName;
+                elements.compareStableModelBadge.textContent = stableModelDisplayName;
+                
+                // Show loading state for both
+                elements.compareDevResponseContainer.innerHTML = '<div class="flex justify-center my-4"><div class="loading-indicator"></div> Generating response...</div>';
+                elements.compareDevResponseSection.classList.remove('hidden');
+                elements.compareDevResponseStats.textContent = 'Processing...';
+                
+                elements.compareStableResponseContainer.innerHTML = '<div class="flex justify-center my-4"><div class="loading-indicator"></div> Generating response...</div>';
+                elements.compareStableResponseSection.classList.remove('hidden');
+                elements.compareStableResponseStats.textContent = 'Processing...';
+                
+                const devStartTime = performance.now();
+                const stableStartTime = performance.now();
+                
+                // Make both API calls concurrently
+                try {
+                    const [devResponse, stableResponse] = await Promise.all([
+                        callApi(devSystemPrompt, devUserPrompt, devParameters, devModel),
+                        callApi(stableSystemPrompt, stableUserPrompt, stableParameters, stableModel)
+                    ]);
+                    
+                    const devEndTime = performance.now();
+                    const stableEndTime = performance.now();
+                    
+                    const devDuration = ((devEndTime - devStartTime) / 1000).toFixed(2);
+                    const stableDuration = ((stableEndTime - stableStartTime) / 1000).toFixed(2);
+                    
+                    // Update dev response UI
+                    elements.compareDevResponseStats.textContent = `Completed in ${devDuration}s`;
+                    elements.compareDevResponseContainer.textContent = devResponse;
+                    
+                    // Update stable response UI
+                    elements.compareStableResponseStats.textContent = `Completed in ${stableDuration}s`;
+                    elements.compareStableResponseContainer.textContent = stableResponse;
+                } catch (error) {
+                    showToast('API request failed: ' + error.message, 'error');
+                    
+                    // Update error state in both containers
+                    elements.compareDevResponseStats.textContent = 'Error';
+                    elements.compareDevResponseContainer.textContent = `Error: ${error.message}`;
+                    
+                    elements.compareStableResponseStats.textContent = 'Error';
+                    elements.compareStableResponseContainer.textContent = `Error: ${error.message}`;
+                }
+            }
+
+            async function callApi(systemPrompt, userPrompt, parameters, modelOverride = null) {
+                const { baseURL, apiKey, model } = state.apiConfig;
+                
+                if (!baseURL || !apiKey) {
+                    throw new Error('API configuration is incomplete');
+                }
+                
+                const endpoint = `${baseURL}/chat/completions`;
+                
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                };
+                
+                const messages = [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ];
+                
+                // Use model override if provided, otherwise use default
+                const modelToUse = modelOverride || model;
+                
+                const requestBody = {
+                    model: modelToUse,
+                    messages: messages,
+                    ...parameters
+                };
+                
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(requestBody)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                        throw new Error('Invalid response format from API');
+                    }
+                    
+                    return data.choices[0].message.content;
+                } catch (error) {
+                    console.error('API call error:', error);
+                    throw error;
+                }
+            }
+
+            function copyResponse() {
+                const text = elements.responseContainer.textContent;
+                navigator.clipboard.writeText(text)
+                    .then(() => {
+                        showToast('Response copied to clipboard');
+                    })
+                    .catch(() => {
+                        showToast('Failed to copy response', 'error');
+                    });
+            }
+
+            function toggleDarkMode() {
+                state.darkMode = !state.darkMode;
+                setDarkMode(state.darkMode);
+                localStorage.setItem('darkMode', state.darkMode);
+            }
+
+            function setDarkMode(enabled) {
+                if (enabled) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+
+            function updateCharCount(textarea) {
+                const count = textarea.value.length;
+                const countEl = textarea.parentElement.querySelector('.char-count');
+                if (countEl) {
+                    countEl.textContent = `${count} characters`;
+                }
+            }
+
+            function showToast(message, type = 'success') {
+                const toast = elements.toast;
+                toast.textContent = message;
+                
+                if (type === 'error') {
+                    toast.classList.add('bg-red-500');
+                    toast.classList.remove('bg-blue-500', 'bg-green-500');
+                } else if (type === 'info') {
+                    toast.classList.add('bg-blue-500');
+                    toast.classList.remove('bg-red-500', 'bg-green-500');
+                } else {
+                    toast.classList.add('bg-green-500');
+                    toast.classList.remove('bg-red-500', 'bg-blue-500');
+                }
+                
+                toast.classList.add('show');
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
+
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            }
+            
+            // Delete functions
+            
+            function showDeleteCategoryConfirm() {
+                if (!state.currentCategory) {
+                    showToast('No category selected', 'error');
+                    return;
+                }
+                
+                // Get category name
+                const category = state.categories.find(c => c.id === state.currentCategory);
+                if (!category) {
+                    showToast('Category not found', 'error');
+                    return;
+                }
+                
+                // Set up confirm delete modal
+                state.deleteType = 'category';
+                state.deleteTarget = state.currentCategory;
+                elements.confirmDeleteMessage.textContent = `Are you sure you want to delete the category "${category.name}"? This will also delete all prompts and stable versions in this category.`;
+                
+                // Show modal
+                elements.confirmDeleteModal.classList.remove('hidden');
+            }
+            
+            function showDeletePromptConfirm() {
+                if (!state.currentCategory || !state.currentPrompt) {
+                    showToast('No prompt selected', 'error');
+                    return;
+                }
+                
+                // Get prompt name
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const prompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                if (!prompt) {
+                    showToast('Prompt not found', 'error');
+                    return;
+                }
+                
+                // Set up confirm delete modal
+                state.deleteType = 'prompt';
+                state.deleteTarget = state.currentPrompt;
+                elements.confirmDeleteMessage.textContent = `Are you sure you want to delete the prompt "${prompt.name}"? This will also delete all stable versions of this prompt.`;
+                
+                // Show modal
+                elements.confirmDeleteModal.classList.remove('hidden');
+            }
+            
+            function showDeleteStableVersionConfirm() {
+                if (!state.currentCategory || !state.currentPrompt) {
+                    showToast('No prompt selected', 'error');
+                    return;
+                }
+                
+                const stableVersionId = elements.stableVersionSelect.value;
+                if (!stableVersionId) {
+                    showToast('No stable version selected', 'error');
+                    return;
+                }
+                
+                // Get prompt and version
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const prompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                if (!prompt || !prompt.stableVersions) {
+                    showToast('Prompt not found', 'error');
+                    return;
+                }
+                
+                const version = prompt.stableVersions.find(v => v.id === stableVersionId);
+                if (!version) {
+                    showToast('Version not found', 'error');
+                    return;
+                }
+                
+                // Set up confirm delete modal
+                state.deleteType = 'stableVersion';
+                state.deleteTarget = stableVersionId;
+                elements.confirmDeleteMessage.textContent = `Are you sure you want to delete the stable version "${version.name}"?`;
+                
+                // Show modal
+                elements.confirmDeleteModal.classList.remove('hidden');
+            }
+            
+            function hideConfirmDeleteModal() {
+                elements.confirmDeleteModal.classList.add('hidden');
+            }
+            
+            function executeDelete() {
+                if (!state.deleteType || !state.deleteTarget) {
+                    hideConfirmDeleteModal();
+                    return;
+                }
+                
+                if (state.deleteType === 'category') {
+                    deleteCategory();
+                } else if (state.deleteType === 'prompt') {
+                    deletePrompt();
+                } else if (state.deleteType === 'stableVersion') {
+                    deleteStableVersion();
+                } else if (state.deleteType === 'model') {
+                    deleteModel();
+                }
+                
+                // Hide modal
+                hideConfirmDeleteModal();
+            }
+            
+            function deleteCategory() {
+                const categoryId = state.deleteTarget;
+                const categoryIndex = state.categories.findIndex(c => c.id === categoryId);
+                
+                if (categoryIndex === -1) {
+                    showToast('Category not found', 'error');
+                    return;
+                }
+                
+                // Get category name for the toast
+                const categoryName = state.categories[categoryIndex].name;
+                
+                // Remove category
+                state.categories.splice(categoryIndex, 1);
+                
+                // Remove prompts
+                delete state.prompts[categoryId];
+                
+                // Reset current selections if needed
+                if (state.currentCategory === categoryId) {
+                    state.currentCategory = null;
+                    state.currentPrompt = null;
+                }
+                
+                // Update UI
+                updateCategorySelect();
+                updatePromptSelect();
+                clearPromptEditor();
+                
+                // Save state
+                saveState();
+                
+                // Show toast
+                showToast(`Category "${categoryName}" deleted`);
+            }
+            
+            function deletePrompt() {
+                const promptId = state.deleteTarget;
+                
+                if (!state.currentCategory) {
+                    showToast('No category selected', 'error');
+                    return;
+                }
+                
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const promptIndex = categoryPrompts.findIndex(p => p.id === promptId);
+                
+                if (promptIndex === -1) {
+                    showToast('Prompt not found', 'error');
+                    return;
+                }
+                
+                // Get prompt name for the toast
+                const promptName = categoryPrompts[promptIndex].name;
+                
+                // Remove prompt
+                categoryPrompts.splice(promptIndex, 1);
+                
+                // Reset current prompt if needed
+                if (state.currentPrompt === promptId) {
+                    state.currentPrompt = null;
+                }
+                
+                // Update UI
+                updatePromptSelect();
+                clearPromptEditor();
+                
+                // Save state
+                saveState();
+                
+                // Show toast
+                showToast(`Prompt "${promptName}" deleted`);
+            }
+            
+            function deleteStableVersion() {
+                const versionId = state.deleteTarget;
+                
+                if (!state.currentCategory || !state.currentPrompt) {
+                    showToast('No prompt selected', 'error');
+                    return;
+                }
+                
+                const categoryPrompts = state.prompts[state.currentCategory] || [];
+                const prompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                
+                if (!prompt || !prompt.stableVersions) {
+                    showToast('Prompt not found', 'error');
+                    return;
+                }
+                
+                const versionIndex = prompt.stableVersions.findIndex(v => v.id === versionId);
+                
+                if (versionIndex === -1) {
+                    showToast('Stable version not found', 'error');
+                    return;
+                }
+                
+                // Get version name for the toast
+                const versionName = prompt.stableVersions[versionIndex].name;
+                
+                // Remove version
+                prompt.stableVersions.splice(versionIndex, 1);
+                
+                // Update UI
+                updateStableVersionSelect();
+                if (state.compareMode) {
+                    updateComparisonView();
+                }
+                
+                // Save state
+                saveState();
+                
+                // Show toast
+                showToast(`Stable version "${versionName}" deleted`);
+            }
+
+            // Initial setup of delete buttons visibility
+            elements.deleteCategoryBtn.style.visibility = state.currentCategory ? 'visible' : 'hidden';
+            elements.deletePromptBtn.style.visibility = state.currentPrompt ? 'visible' : 'hidden';
+            elements.deleteStableVersionBtn.style.visibility = 'hidden';
+            
+            // Add event listener for stableVersionSelect to update delete button visibility
+            elements.stableVersionSelect.addEventListener('change', () => {
+                const stableVersionId = elements.stableVersionSelect.value;
+                elements.deleteStableVersionBtn.style.visibility = stableVersionId ? 'visible' : 'hidden';
+            });
+        });
+    </script>
+</body>
+</html>
