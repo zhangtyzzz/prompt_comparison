@@ -352,6 +352,9 @@
         <header class="flex justify-between items-center mb-6">
             <h1 class="text-3xl font-bold text-blue-600">Prompt Comparison Tool</h1>
             <div class="flex items-center space-x-2">
+                <button id="apiConfigBtn" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                    <i class="fas fa-cog"></i>
+                </button>
                 <button id="darkModeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700">
                     <i class="fas fa-moon dark:hidden"></i>
                     <i class="fas fa-sun hidden dark:block"></i>
@@ -362,7 +365,7 @@
         <!-- Navigation and Configuration -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <!-- Category and Prompt Management -->
-            <div class="md:col-span-2 flex flex-col space-y-2">
+            <div class="md:col-span-4 flex flex-col space-y-2">
                 <div class="flex items-center space-x-2 mb-2">
                     <label class="font-medium text-gray-700 dark:text-gray-300">Category:</label>
                     <div class="flex-grow flex items-center space-x-2">
@@ -391,37 +394,6 @@
                         </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- API Configuration -->
-            <div class="md:col-span-2 flex flex-col space-y-2">
-                <div class="flex items-center space-x-2 mb-2">
-                    <label class="font-medium text-gray-700 dark:text-gray-300">API Config:</label>
-                    <input id="baseURL" type="text" placeholder="Base URL (e.g., https://api.openai.com/v1)" 
-                        class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
-                </div>
-                <div class="flex space-x-2">
-                    <input id="apiKey" type="password" placeholder="API Key" 
-                        class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
-                    <input id="modelName" type="text" placeholder="Default Model Name (e.g., gpt-3.5-turbo)" 
-                        class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
-                    <button id="saveConfigBtn" class="btn-primary">
-                        Save Config
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Available Models Configuration -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">Available Models</h3>
-                <button id="addModelBtn" class="btn-outline flex items-center text-sm">
-                    <i class="fas fa-plus mr-1"></i> Add Model
-                </button>
-            </div>
-            <div id="availableModelsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                <!-- Models will be displayed here -->
             </div>
         </div>
 
@@ -743,52 +715,187 @@
             </div>
         </div>
         
-        <!-- Confirm Delete Modal -->
-        <div id="confirmDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Confirm Delete</h3>
-                <p id="confirmDeleteMessage" class="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete this item?</p>
-                <div class="flex justify-end space-x-2">
-                    <button id="cancelDeleteBtn" class="btn-secondary">Cancel</button>
-                    <button id="confirmDeleteBtn" class="btn-danger">Delete</button>
+        <!-- Confirm Delete Modal with highest priority -->
+        <div id="confirmDeleteModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.75); align-items: center; justify-content: center; z-index: 9999;">
+            <div style="background-color: white; border-radius: 8px; padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; color: #1f2937;">确认删除</h3>
+                <p id="confirmDeleteMessage" style="margin-bottom: 24px; color: #4b5563;">确定要删除此项目吗？</p>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button id="cancelDeleteBtn" style="padding: 8px 16px; border-radius: 4px; background-color: #e5e7eb; color: #1f2937; border: none; cursor: pointer;">取消</button>
+                    <button id="confirmDeleteBtn" style="padding: 8px 16px; border-radius: 4px; background-color: #ef4444; color: white; border: none; cursor: pointer;">删除</button>
                 </div>
             </div>
         </div>
         
         <!-- Toast -->
         <div id="toast" class="toast"></div>
+
+        <!-- Add new API Config Modal -->
+        <div id="apiConfigModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200">API 配置</h3>
+                    <button id="closeApiConfigBtn" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- API Configurations Section -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-3">API配置列表</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="apiConfigsContainer">
+                        <!-- API configurations will be displayed here -->
+                    </div>
+                </div>
+                
+                <!-- Add New API Config Section -->
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-lg font-medium text-gray-700 dark:text-gray-300">添加新配置</h4>
+                        <button id="addApiConfigBtn" class="btn-outline flex items-center text-sm">
+                            <i class="fas fa-plus mr-1"></i> 添加新配置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add New API Config Modal -->
+        <div id="newApiConfigModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">添加新API配置</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">配置名称</label>
+                    <input id="newApiConfigName" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="例如: OpenAI API, Azure API">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base URL</label>
+                    <input id="newApiConfigBaseUrl" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="例如: https://api.openai.com/v1">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">API Key</label>
+                    <input id="newApiConfigApiKey" type="password" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="API Key">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">可用模型</label>
+                    <div class="mb-2">
+                        <div class="flex items-center space-x-2">
+                            <input id="newModelInput" type="text" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="输入模型名称，如 gpt-3.5-turbo">
+                            <button id="addModelToConfigBtn" class="btn-outline">添加</button>
+                        </div>
+                    </div>
+                    <div id="newApiConfigModelsContainer" class="border border-gray-300 dark:border-gray-600 rounded-md p-2 max-h-40 overflow-y-auto">
+                        <!-- Models will be added here -->
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelNewApiConfigBtn" class="btn-secondary">取消</button>
+                    <button id="saveNewApiConfigBtn" class="btn-primary">添加</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="editApiConfigModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">编辑API配置</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">配置名称</label>
+                    <input id="editApiConfigName" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="例如: OpenAI API, Azure API">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base URL</label>
+                    <input id="editApiConfigBaseUrl" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="例如: https://api.openai.com/v1">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">API Key</label>
+                    <input id="editApiConfigApiKey" type="password" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="API Key">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">可用模型</label>
+                    <div class="mb-2">
+                        <div class="flex items-center space-x-2">
+                            <input id="editModelInput" type="text" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="输入模型名称，如 gpt-3.5-turbo">
+                            <button id="addModelToEditBtn" class="btn-outline">添加</button>
+                            <button id="refreshModelsBtn" class="btn-outline p-2 ml-1" title="自动获取模型列表">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="editApiConfigModelsContainer" class="border border-gray-300 dark:border-gray-600 rounded-md p-2 max-h-40 overflow-y-auto">
+                        <!-- Models will be added here -->
+                    </div>
+                </div>
+                <input type="hidden" id="editApiConfigId">
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelEditApiConfigBtn" class="btn-secondary">取消</button>
+                    <button id="saveEditApiConfigBtn" class="btn-primary">保存</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded, setting up initial event listeners');
+            
+            // 确保确认删除模态框在初始状态下是隐藏的
+            const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+            if (confirmDeleteModal) {
+                confirmDeleteModal.style.display = 'none';
+                confirmDeleteModal.classList.add('hidden');
+            }
+            
+            // 首先设置API Config按钮的点击事件，确保它最先被设置
+            const apiConfigBtn = document.getElementById('apiConfigBtn');
+            if (apiConfigBtn) {
+                console.log('API Config button found, setting up click event');
+                apiConfigBtn.addEventListener('click', function() {
+                    console.log('API Config button clicked');
+                    const modal = document.getElementById('apiConfigModal');
+                    if (modal) {
+                        modal.classList.remove('hidden');
+                        console.log('API Config modal displayed');
+                    } else {
+                        console.error('API Config modal not found');
+                    }
+                });
+            } else {
+                console.error('API Config button not found!');
+            }
+            
             // State management
             const state = {
-                categories: [],
-                prompts: {},
-                currentCategory: null,
-                currentPrompt: null,
-                apiConfig: {
-                    baseURL: 'https://api.openai.com/v1',
-                    apiKey: '',
-                    model: 'gpt-3.5-turbo'
-                },
-                models: [
-                    { id: 'gpt-3.5-turbo', displayName: 'GPT-3.5 Turbo' },
-                    { id: 'gpt-4', displayName: 'GPT-4' }
-                ],
-                currentDevModel: null, // For edit mode
-                currentCompareDevModel: null, // For compare mode
-                currentCompareStableModel: null, // For compare mode
-                darkMode: localStorage.getItem('darkMode') === 'true',
-                compareMode: false,
-                deleteTarget: null,
-                deleteType: null
+                models: [],
+                tempModels: [],
+                editTempModels: [], // 添加编辑时的临时模型数组
+                apiConfigs: [],
+                selectedSourceCategory: null,
+                selectedTargetCategory: null,
+                promptCategoryItems: {}
             };
 
             // DOM elements
             const elements = {
                 // Dark mode
                 darkModeToggle: document.getElementById('darkModeToggle'),
+                
+                // API Config Button
+                apiConfigBtn: document.getElementById('apiConfigBtn'),
+                apiConfigModal: document.getElementById('apiConfigModal'),
+                closeApiConfigBtn: document.getElementById('closeApiConfigBtn'),
+                apiConfigsContainer: document.getElementById('apiConfigsContainer'),
+                
+                // New API Config
+                addApiConfigBtn: document.getElementById('addApiConfigBtn'),
+                newApiConfigModal: document.getElementById('newApiConfigModal'),
+                newApiConfigName: document.getElementById('newApiConfigName'),
+                newApiConfigBaseUrl: document.getElementById('newApiConfigBaseUrl'),
+                newApiConfigApiKey: document.getElementById('newApiConfigApiKey'),
+                newModelInput: document.getElementById('newModelInput'),
+                addModelToConfigBtn: document.getElementById('addModelToConfigBtn'),
+                newApiConfigModelsContainer: document.getElementById('newApiConfigModelsContainer'),
+                cancelNewApiConfigBtn: document.getElementById('cancelNewApiConfigBtn'),
+                saveNewApiConfigBtn: document.getElementById('saveNewApiConfigBtn'),
                 
                 // Category and prompt selection
                 categorySelect: document.getElementById('categorySelect'),
@@ -797,12 +904,6 @@
                 newPromptBtn: document.getElementById('newPromptBtn'),
                 deleteCategoryBtn: document.getElementById('deleteCategoryBtn'),
                 deletePromptBtn: document.getElementById('deletePromptBtn'),
-                
-                // API configuration
-                baseURL: document.getElementById('baseURL'),
-                apiKey: document.getElementById('apiKey'),
-                modelName: document.getElementById('modelName'),
-                saveConfigBtn: document.getElementById('saveConfigBtn'),
                 
                 // Model Management
                 availableModelsContainer: document.getElementById('availableModelsContainer'),
@@ -915,21 +1016,25 @@
                 // Load data from localStorage
                 loadState();
                 
+                // 如果没有任何API配置，添加一个空白的供用户配置
+                if (state.apiConfigs.length === 0) {
+                    console.log('No API configs found, will prompt user to create one');
+                }
+                
                 // Initialize UI
                 updateCategorySelect();
                 updatePromptSelect();
                 updateStableVersionSelect();
-                updateAvailableModels();
-                updateModelSelects();
+                try {
+                    updateApiConfigsDisplay();
+                    updateModelSelects(); // 恢复对模型选择器更新的调用
+                } catch (error) {
+                    console.error('Error updating UI:', error);
+                }
                 setDarkMode(state.darkMode);
                 
                 // Set up event listeners
                 setupEventListeners();
-                
-                // Set initial values
-                elements.baseURL.value = state.apiConfig.baseURL;
-                elements.apiKey.value = state.apiConfig.apiKey;
-                elements.modelName.value = state.apiConfig.model;
                 
                 // Check for placeholders in initial prompts
                 updatePlaceholderStatus();
@@ -960,137 +1065,305 @@
                         state.prompts = JSON.parse(savedPrompts);
                     }
                     
-                    // Load API config
-                    const savedConfig = localStorage.getItem('apiConfig');
-                    if (savedConfig) {
-                        state.apiConfig = JSON.parse(savedConfig);
+                    // Load API configs
+                    const savedApiConfigs = localStorage.getItem('apiConfigs');
+                    if (savedApiConfigs) {
+                        const encryptedConfigs = JSON.parse(savedApiConfigs);
+                        // 解密所有API密钥
+                        state.apiConfigs = encryptedConfigs.map(config => {
+                            return {
+                                ...config,
+                                apiKey: decryptApiKey(config.apiKey)
+                            };
+                        });
                     }
                     
                     // Load models
                     const savedModels = localStorage.getItem('availableModels');
                     if (savedModels) {
-                        state.models = JSON.parse(savedModels);
+                        // 兼容旧版数据，但不再使用全局模型
                     }
-                    
-                    // Load current models
-                    state.currentDevModel = localStorage.getItem('currentDevModel') || (state.models.length > 0 ? state.models[0].id : null);
-                    state.currentCompareDevModel = localStorage.getItem('currentCompareDevModel') || (state.models.length > 0 ? state.models[0].id : null);
-                    state.currentCompareStableModel = localStorage.getItem('currentCompareStableModel') || (state.models.length > 0 ? state.models[0].id : null);
                 } catch (error) {
                     console.error('Error loading data from localStorage:', error);
                     showToast('Error loading saved data. Starting fresh.', 'error');
                 }
             }
 
+            // 简单加密函数 - 使用简单的XOR加密
+            function encryptApiKey(apiKey) {
+                // 使用固定的密钥，这只是基本保护，不是真正的安全加密
+                const secretKey = "prompt_comparison_app_secret_key";
+                let encrypted = "";
+                
+                for(let i = 0; i < apiKey.length; i++) {
+                    // 对每个字符进行XOR操作
+                    const charCode = apiKey.charCodeAt(i) ^ secretKey.charCodeAt(i % secretKey.length);
+                    encrypted += String.fromCharCode(charCode);
+                }
+                
+                // 转换为Base64以便安全存储
+                return btoa(encrypted);
+            }
+            
+            // 简单解密函数
+            function decryptApiKey(encryptedKey) {
+                if (!encryptedKey) return "";
+                
+                const secretKey = "prompt_comparison_app_secret_key";
+                let decrypted = "";
+                
+                try {
+                    // 从Base64解码
+                    const encrypted = atob(encryptedKey);
+                    
+                    for(let i = 0; i < encrypted.length; i++) {
+                        // 再次XOR得到原始字符
+                        const charCode = encrypted.charCodeAt(i) ^ secretKey.charCodeAt(i % secretKey.length);
+                        decrypted += String.fromCharCode(charCode);
+                    }
+                    
+                    return decrypted;
+                } catch (e) {
+                    console.error("解密失败:", e);
+                    return "";
+                }
+            }
+
             function saveState() {
                 try {
+                    // 在保存API配置前加密所有API密钥
+                    const encryptedApiConfigs = state.apiConfigs.map(config => {
+                        // 创建新对象以避免修改原始state
+                        return {
+                            ...config,
+                            apiKey: encryptApiKey(config.apiKey)
+                        };
+                    });
+                    
                     localStorage.setItem('promptCategories', JSON.stringify(state.categories));
                     localStorage.setItem('promptData', JSON.stringify(state.prompts));
-                    localStorage.setItem('apiConfig', JSON.stringify(state.apiConfig));
+                    localStorage.setItem('apiConfigs', JSON.stringify(encryptedApiConfigs));
                     localStorage.setItem('darkMode', state.darkMode);
-                    localStorage.setItem('availableModels', JSON.stringify(state.models));
-                    localStorage.setItem('currentDevModel', state.currentDevModel);
-                    localStorage.setItem('currentCompareDevModel', state.currentCompareDevModel);
-                    localStorage.setItem('currentCompareStableModel', state.currentCompareStableModel);
                 } catch (error) {
                     console.error('Error saving data to localStorage:', error);
-                    showToast('Error saving data. Your changes may not persist.', 'error');
+                    showToast('Error saving data', 'error');
                 }
             }
 
             function setupEventListeners() {
                 // Dark mode toggle
-                elements.darkModeToggle.addEventListener('click', toggleDarkMode);
+                if (elements.darkModeToggle) {
+                    elements.darkModeToggle.addEventListener('click', toggleDarkMode);
+                }
                 
-                // Category and prompt selection
-                elements.categorySelect.addEventListener('change', onCategoryChange);
-                elements.promptSelect.addEventListener('change', onPromptChange);
-                elements.newCategoryBtn.addEventListener('click', showNewCategoryModal);
-                elements.newPromptBtn.addEventListener('click', showNewPromptModal);
-                elements.deleteCategoryBtn.addEventListener('click', showDeleteCategoryConfirm);
-                elements.deletePromptBtn.addEventListener('click', showDeletePromptConfirm);
-                elements.deleteStableVersionBtn.addEventListener('click', showDeleteStableVersionConfirm);
+                // 直接使用DOM获取元素并绑定事件，避免缓存的elements引用可能不存在
+                const apiConfigBtn = document.getElementById('apiConfigBtn');
+                if (apiConfigBtn) {
+                    console.log('API config button found, attaching click event');
+                    apiConfigBtn.addEventListener('click', function() {
+                        console.log('API config button clicked');
+                        const apiConfigModal = document.getElementById('apiConfigModal');
+                        if (apiConfigModal) {
+                            apiConfigModal.classList.remove('hidden');
+                            console.log('API config modal displayed');
+                        } else {
+                            console.error('API config modal not found');
+                        }
+                    });
+                }
                 
-                // API configuration
-                elements.saveConfigBtn.addEventListener('click', saveApiConfig);
+                // 绑定其他新配置相关按钮
+                bindNewApiConfigButtons();
                 
-                // Model selection
-                elements.devModelSelect.addEventListener('change', (e) => {
-                    state.currentDevModel = e.target.value;
-                    saveState();
-                });
+                try {
+                    // Category and prompt selection
+                    if (elements.categorySelect) {
+                        elements.categorySelect.addEventListener('change', onCategoryChange);
+                    }
+                    if (elements.promptSelect) {
+                        elements.promptSelect.addEventListener('change', onPromptChange);
+                    }
+                    if (elements.newCategoryBtn) {
+                        elements.newCategoryBtn.addEventListener('click', showNewCategoryModal);
+                    }
+                    if (elements.newPromptBtn) {
+                        elements.newPromptBtn.addEventListener('click', showNewPromptModal);
+                    }
+                    if (elements.deleteCategoryBtn) {
+                        elements.deleteCategoryBtn.addEventListener('click', showDeleteCategoryConfirm);
+                    }
+                    if (elements.deletePromptBtn) {
+                        elements.deletePromptBtn.addEventListener('click', showDeletePromptConfirm);
+                    }
+                    if (elements.deleteStableVersionBtn) {
+                        elements.deleteStableVersionBtn.addEventListener('click', showDeleteStableVersionConfirm);
+                    }
+                    
+                    // Model selection
+                    if (elements.devModelSelect) {
+                        elements.devModelSelect.addEventListener('change', (e) => {
+                            // 模型值现在包含配置ID和模型ID
+                            saveState();
+                        });
+                    }
+                    
+                    if (elements.compareDevModelSelect) {
+                        elements.compareDevModelSelect.addEventListener('change', (e) => {
+                            // 模型值现在包含配置ID和模型ID
+                            saveState();
+                        });
+                    }
+                    
+                    if (elements.compareStableModelSelect) {
+                        elements.compareStableModelSelect.addEventListener('change', (e) => {
+                            // 模型值现在包含配置ID和模型ID
+                            saveState();
+                        });
+                    }
+                    
+                    // Model management
+                    if (elements.addModelBtn) {
+                        elements.addModelBtn.addEventListener('click', showAddModelModal);
+                    }
+                    
+                    // Mode switching
+                    if (elements.editModeBtn) {
+                        elements.editModeBtn.addEventListener('click', () => switchMode(false));
+                    }
+                    if (elements.compareModeBtn) {
+                        elements.compareModeBtn.addEventListener('click', () => switchMode(true));
+                    }
+                    
+                    // Development version
+                    if (elements.systemPrompt) {
+                        elements.systemPrompt.addEventListener('input', (e) => {
+                            updateCharCount(e.target);
+                            saveDevelopmentVersion();
+                            updatePlaceholderStatus();
+                        });
+                    }
+                    if (elements.userPrompt) {
+                        elements.userPrompt.addEventListener('input', (e) => {
+                            updateCharCount(e.target);
+                            saveDevelopmentVersion();
+                            updatePlaceholderStatus();
+                        });
+                    }
+                    if (elements.saveAsStableBtn) {
+                        elements.saveAsStableBtn.addEventListener('click', showSaveVersionModal);
+                    }
+                    if (elements.testBtn) {
+                        elements.testBtn.addEventListener('click', testPrompt);
+                    }
+                    
+                    // Parameters
+                    if (elements.addParameterBtn) {
+                        elements.addParameterBtn.addEventListener('click', showAddParameterModal);
+                    }
+                    document.querySelectorAll('.remove-parameter').forEach(btn => {
+                        btn.addEventListener('click', removeParameter);
+                    });
+                    
+                    // Test input
+                    if (elements.testInput) {
+                        elements.testInput.addEventListener('input', validateJsonInput);
+                    }
+                    
+                    // Response
+                    if (elements.copyResponseBtn) {
+                        elements.copyResponseBtn.addEventListener('click', copyResponse);
+                    }
+                    
+                    // Comparison mode
+                    if (elements.stableVersionSelect) {
+                        elements.stableVersionSelect.addEventListener('change', updateComparisonView);
+                    }
+                    if (elements.compareTestInput) {
+                        elements.compareTestInput.addEventListener('input', () => validateJsonInput(null, true));
+                    }
+                    if (elements.runComparisonBtn) {
+                        elements.runComparisonBtn.addEventListener('click', runComparison);
+                    }
+                    
+                    // Modals
+                    if (elements.cancelNewCategoryBtn) {
+                        elements.cancelNewCategoryBtn.addEventListener('click', hideNewCategoryModal);
+                    }
+                    if (elements.saveNewCategoryBtn) {
+                        elements.saveNewCategoryBtn.addEventListener('click', createNewCategory);
+                    }
+                    
+                    if (elements.cancelNewPromptBtn) {
+                        elements.cancelNewPromptBtn.addEventListener('click', hideNewPromptModal);
+                    }
+                    if (elements.saveNewPromptBtn) {
+                        elements.saveNewPromptBtn.addEventListener('click', createNewPrompt);
+                    }
+                    
+                    if (elements.cancelSaveVersionBtn) {
+                        elements.cancelSaveVersionBtn.addEventListener('click', hideSaveVersionModal);
+                    }
+                    if (elements.confirmSaveVersionBtn) {
+                        elements.confirmSaveVersionBtn.addEventListener('click', saveStableVersion);
+                    }
+                    
+                    if (elements.cancelAddParameterBtn) {
+                        elements.cancelAddParameterBtn.addEventListener('click', hideAddParameterModal);
+                    }
+                    if (elements.confirmAddParameterBtn) {
+                        elements.confirmAddParameterBtn.addEventListener('click', addParameter);
+                    }
+                    
+                    if (elements.cancelAddModelBtn) {
+                        elements.cancelAddModelBtn.addEventListener('click', hideAddModelModal);
+                    }
+                    if (elements.confirmAddModelBtn) {
+                        elements.confirmAddModelBtn.addEventListener('click', addModel);
+                    }
+                    
+                    // Confirm Delete Modal
+                    if (elements.cancelDeleteBtn) {
+                        elements.cancelDeleteBtn.addEventListener('click', hideConfirmDeleteModal);
+                    }
+                    if (elements.confirmDeleteBtn) {
+                        elements.confirmDeleteBtn.addEventListener('click', executeDelete);
+                    }
+                    
+                    // Initial character counts
+                    if (elements.systemPrompt) {
+                        updateCharCount(elements.systemPrompt);
+                    }
+                    if (elements.userPrompt) {
+                        updateCharCount(elements.userPrompt);
+                    }
+                } catch (error) {
+                    console.error('Error setting up API config event listeners:', error);
+                }
+            }
+
+            function bindNewApiConfigButtons() {
+                // 添加模型按钮
+                const addModelToConfigBtn = document.getElementById('addModelToConfigBtn');
+                if (addModelToConfigBtn) {
+                    addModelToConfigBtn.addEventListener('click', addModelToTempList);
+                }
                 
-                elements.compareDevModelSelect.addEventListener('change', (e) => {
-                    state.currentCompareDevModel = e.target.value;
-                    saveState();
-                });
+                // 取消按钮
+                const cancelNewApiConfigBtn = document.getElementById('cancelNewApiConfigBtn');
+                if (cancelNewApiConfigBtn) {
+                    cancelNewApiConfigBtn.addEventListener('click', function() {
+                        const newApiConfigModal = document.getElementById('newApiConfigModal');
+                        if (newApiConfigModal) {
+                            newApiConfigModal.classList.add('hidden');
+                        }
+                    });
+                }
                 
-                elements.compareStableModelSelect.addEventListener('change', (e) => {
-                    state.currentCompareStableModel = e.target.value;
-                    saveState();
-                });
-                
-                // Model management
-                elements.addModelBtn.addEventListener('click', showAddModelModal);
-                
-                // Mode switching
-                elements.editModeBtn.addEventListener('click', () => switchMode(false));
-                elements.compareModeBtn.addEventListener('click', () => switchMode(true));
-                
-                // Development version
-                elements.systemPrompt.addEventListener('input', (e) => {
-                    updateCharCount(e.target);
-                    saveDevelopmentVersion();
-                    updatePlaceholderStatus();
-                });
-                elements.userPrompt.addEventListener('input', (e) => {
-                    updateCharCount(e.target);
-                    saveDevelopmentVersion();
-                    updatePlaceholderStatus();
-                });
-                elements.saveAsStableBtn.addEventListener('click', showSaveVersionModal);
-                elements.testBtn.addEventListener('click', testPrompt);
-                
-                // Parameters
-                elements.addParameterBtn.addEventListener('click', showAddParameterModal);
-                document.querySelectorAll('.remove-parameter').forEach(btn => {
-                    btn.addEventListener('click', removeParameter);
-                });
-                
-                // Test input
-                elements.testInput.addEventListener('input', validateJsonInput);
-                
-                // Response
-                elements.copyResponseBtn.addEventListener('click', copyResponse);
-                
-                // Comparison mode
-                elements.stableVersionSelect.addEventListener('change', updateComparisonView);
-                elements.compareTestInput.addEventListener('input', () => validateJsonInput(null, true));
-                elements.runComparisonBtn.addEventListener('click', runComparison);
-                
-                // Modals
-                elements.cancelNewCategoryBtn.addEventListener('click', hideNewCategoryModal);
-                elements.saveNewCategoryBtn.addEventListener('click', createNewCategory);
-                
-                elements.cancelNewPromptBtn.addEventListener('click', hideNewPromptModal);
-                elements.saveNewPromptBtn.addEventListener('click', createNewPrompt);
-                
-                elements.cancelSaveVersionBtn.addEventListener('click', hideSaveVersionModal);
-                elements.confirmSaveVersionBtn.addEventListener('click', saveStableVersion);
-                
-                elements.cancelAddParameterBtn.addEventListener('click', hideAddParameterModal);
-                elements.confirmAddParameterBtn.addEventListener('click', addParameter);
-                
-                elements.cancelAddModelBtn.addEventListener('click', hideAddModelModal);
-                elements.confirmAddModelBtn.addEventListener('click', addModel);
-                
-                // Confirm Delete Modal
-                elements.cancelDeleteBtn.addEventListener('click', hideConfirmDeleteModal);
-                elements.confirmDeleteBtn.addEventListener('click', executeDelete);
-                
-                // Initial character counts
-                updateCharCount(elements.systemPrompt);
-                updateCharCount(elements.userPrompt);
+                // 保存按钮
+                const saveNewApiConfigBtn = document.getElementById('saveNewApiConfigBtn');
+                if (saveNewApiConfigBtn) {
+                    saveNewApiConfigBtn.addEventListener('click', addNewApiConfig);
+                }
             }
 
             function updateCategorySelect() {
@@ -1205,38 +1478,43 @@
                 elements.compareDevModelSelect.innerHTML = '';
                 elements.compareStableModelSelect.innerHTML = '';
                 
-                // Add options for each model
-                state.models.forEach(model => {
-                    const displayName = model.displayName || model.id;
+                // Add options for each API config and its models
+                state.apiConfigs.forEach(config => {
+                    // 创建配置组标签
+                    const devOptgroup = document.createElement('optgroup');
+                    devOptgroup.label = config.name;
                     
-                    const devOption = document.createElement('option');
-                    devOption.value = model.id;
-                    devOption.textContent = displayName;
-                    elements.devModelSelect.appendChild(devOption);
+                    const compareDevOptgroup = document.createElement('optgroup');
+                    compareDevOptgroup.label = config.name;
                     
-                    const compareDevOption = document.createElement('option');
-                    compareDevOption.value = model.id;
-                    compareDevOption.textContent = displayName;
-                    elements.compareDevModelSelect.appendChild(compareDevOption);
+                    const compareStableOptgroup = document.createElement('optgroup');
+                    compareStableOptgroup.label = config.name;
                     
-                    const compareStableOption = document.createElement('option');
-                    compareStableOption.value = model.id;
-                    compareStableOption.textContent = displayName;
-                    elements.compareStableModelSelect.appendChild(compareStableOption);
+                    // 添加该配置下的所有模型
+                    config.models.forEach(modelId => {
+                        const devOption = document.createElement('option');
+                        devOption.value = `${config.id}:${modelId}`;
+                        devOption.textContent = modelId;
+                        devOptgroup.appendChild(devOption);
+                        
+                        const compareDevOption = document.createElement('option');
+                        compareDevOption.value = `${config.id}:${modelId}`;
+                        compareDevOption.textContent = modelId;
+                        compareDevOptgroup.appendChild(compareDevOption);
+                        
+                        const compareStableOption = document.createElement('option');
+                        compareStableOption.value = `${config.id}:${modelId}`;
+                        compareStableOption.textContent = modelId;
+                        compareStableOptgroup.appendChild(compareStableOption);
+                    });
+                    
+                    // 只有当配置有模型时才添加该组
+                    if (config.models.length > 0) {
+                        elements.devModelSelect.appendChild(devOptgroup);
+                        elements.compareDevModelSelect.appendChild(compareDevOptgroup);
+                        elements.compareStableModelSelect.appendChild(compareStableOptgroup);
+                    }
                 });
-                
-                // Set current values
-                if (state.currentDevModel) {
-                    elements.devModelSelect.value = state.currentDevModel;
-                }
-                
-                if (state.currentCompareDevModel) {
-                    elements.compareDevModelSelect.value = state.currentCompareDevModel;
-                }
-                
-                if (state.currentCompareStableModel) {
-                    elements.compareStableModelSelect.value = state.currentCompareStableModel;
-                }
             }
 
             function onCategoryChange() {
@@ -1783,39 +2061,6 @@
                 showToast(`Parameter "${paramName}" removed`);
             }
 
-            function saveApiConfig() {
-                const baseURL = elements.baseURL.value.trim();
-                const apiKey = elements.apiKey.value.trim();
-                const model = elements.modelName.value.trim();
-                
-                if (!baseURL) {
-                    showToast('Base URL cannot be empty', 'error');
-                    return;
-                }
-                
-                if (!apiKey) {
-                    showToast('API Key cannot be empty', 'error');
-                    return;
-                }
-                
-                if (!model) {
-                    showToast('Model name cannot be empty', 'error');
-                    return;
-                }
-                
-                // Save to state
-                state.apiConfig = {
-                    baseURL,
-                    apiKey,
-                    model
-                };
-                
-                // Save state
-                saveState();
-                
-                // Show toast
-                showToast('API configuration saved');
-            }
 
             function switchMode(compareMode) {
                 state.compareMode = compareMode;
@@ -2058,7 +2303,10 @@
                 const selectedModel = elements.devModelSelect.value;
                 
                 // Update model badge
-                const modelDisplayName = state.models.find(m => m.id === selectedModel)?.displayName || selectedModel;
+                const [configId, modelId] = selectedModel.split(':');
+                const apiConfig = state.apiConfigs.find(config => config.id === configId);
+                const configName = apiConfig ? apiConfig.name : configId;
+                const modelDisplayName = `${configName}:${modelId}`;
                 elements.responseModelBadge.textContent = modelDisplayName;
                 
                 // Show loading state
@@ -2173,8 +2421,26 @@
                 const stableModel = elements.compareStableModelSelect.value;
                 
                 // Update model badges
-                const devModelDisplayName = state.models.find(m => m.id === devModel)?.displayName || devModel;
-                const stableModelDisplayName = state.models.find(m => m.id === stableModel)?.displayName || stableModel;
+                let devModelDisplayName, stableModelDisplayName;
+                
+                if (devModel) {
+                    const [devConfigId, devModelId] = devModel.split(':');
+                    const devApiConfig = state.apiConfigs.find(config => config.id === devConfigId);
+                    const devConfigName = devApiConfig ? devApiConfig.name : devConfigId;
+                    devModelDisplayName = `${devConfigName}:${devModelId}`;
+                } else {
+                    devModelDisplayName = "未选择";
+                }
+                
+                if (stableModel) {
+                    const [stableConfigId, stableModelId] = stableModel.split(':');
+                    const stableApiConfig = state.apiConfigs.find(config => config.id === stableConfigId);
+                    const stableConfigName = stableApiConfig ? stableApiConfig.name : stableConfigId;
+                    stableModelDisplayName = `${stableConfigName}:${stableModelId}`;
+                } else {
+                    stableModelDisplayName = "未选择";
+                }
+                
                 elements.compareDevModelBadge.textContent = devModelDisplayName;
                 elements.compareStableModelBadge.textContent = stableModelDisplayName;
                 
@@ -2223,10 +2489,24 @@
             }
 
             async function callApi(systemPrompt, userPrompt, parameters, modelOverride = null) {
-                const { baseURL, apiKey, model } = state.apiConfig;
+                if (!modelOverride) {
+                    throw new Error('请选择模型');
+                }
+                
+                // 解析模型选择值: configId:modelId
+                const [configId, modelId] = modelOverride.split(':');
+                
+                // 获取对应的API配置
+                const apiConfig = state.apiConfigs.find(config => config.id === configId);
+                
+                if (!apiConfig) {
+                    throw new Error('找不到API配置');
+                }
+                
+                const { baseURL, apiKey } = apiConfig;
                 
                 if (!baseURL || !apiKey) {
-                    throw new Error('API configuration is incomplete');
+                    throw new Error('API配置不完整');
                 }
                 
                 const endpoint = `${baseURL}/chat/completions`;
@@ -2236,16 +2516,15 @@
                     'Authorization': `Bearer ${apiKey}`
                 };
                 
-                const messages = [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ];
-                
-                // Use model override if provided, otherwise use default
-                const modelToUse = modelOverride || model;
+                // 创建消息数组，只有在systemPrompt非空时才添加system消息
+                const messages = [];
+                if (systemPrompt && systemPrompt.trim()) {
+                    messages.push({ role: 'system', content: systemPrompt });
+                }
+                messages.push({ role: 'user', content: userPrompt });
                 
                 const requestBody = {
-                    model: modelToUse,
+                    model: modelId,
                     messages: messages,
                     ...parameters
                 };
@@ -2352,10 +2631,17 @@
                 // Set up confirm delete modal
                 state.deleteType = 'category';
                 state.deleteTarget = state.currentCategory;
-                elements.confirmDeleteMessage.textContent = `Are you sure you want to delete the category "${category.name}"? This will also delete all prompts and stable versions in this category.`;
+                const confirmDeleteMessage = document.getElementById('confirmDeleteMessage');
+                if (confirmDeleteMessage) {
+                    confirmDeleteMessage.textContent = `确定要删除类别 "${category.name}" 吗？这将同时删除该类别下的所有提示和稳定版本。`;
+                }
                 
                 // Show modal
-                elements.confirmDeleteModal.classList.remove('hidden');
+                const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+                if (confirmDeleteModal) {
+                    confirmDeleteModal.style.display = 'flex';
+                    confirmDeleteModal.classList.remove('hidden');
+                }
             }
             
             function showDeletePromptConfirm() {
@@ -2375,10 +2661,16 @@
                 // Set up confirm delete modal
                 state.deleteType = 'prompt';
                 state.deleteTarget = state.currentPrompt;
-                elements.confirmDeleteMessage.textContent = `Are you sure you want to delete the prompt "${prompt.name}"? This will also delete all stable versions of this prompt.`;
+                const confirmDeleteMessage = document.getElementById('confirmDeleteMessage');
+                if (confirmDeleteMessage) {
+                    confirmDeleteMessage.textContent = `确定要删除提示 "${prompt.name}" 吗？这将同时删除该提示的所有稳定版本。`;
+                }
                 
                 // Show modal
-                elements.confirmDeleteModal.classList.remove('hidden');
+                const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+                if (confirmDeleteModal) {
+                    confirmDeleteModal.style.display = 'flex';
+                }
             }
             
             function showDeleteStableVersionConfirm() {
@@ -2387,37 +2679,43 @@
                     return;
                 }
                 
-                const stableVersionId = elements.stableVersionSelect.value;
-                if (!stableVersionId) {
-                    showToast('No stable version selected', 'error');
-                    return;
-                }
-                
-                // Get prompt and version
+                // Get stable version
                 const categoryPrompts = state.prompts[state.currentCategory] || [];
-                const prompt = categoryPrompts.find(p => p.id === state.currentPrompt);
-                if (!prompt || !prompt.stableVersions) {
-                    showToast('Prompt not found', 'error');
+                const currentPrompt = categoryPrompts.find(p => p.id === state.currentPrompt);
+                if (!currentPrompt) {
+                    showToast('Current prompt not found', 'error');
                     return;
                 }
                 
-                const version = prompt.stableVersions.find(v => v.id === stableVersionId);
-                if (!version) {
-                    showToast('Version not found', 'error');
+                const stableVersionId = elements.stableVersionSelect.value;
+                const stableVersion = currentPrompt.stableVersions.find(v => v.id === stableVersionId);
+                if (!stableVersion) {
+                    showToast('Stable version not found', 'error');
                     return;
                 }
                 
                 // Set up confirm delete modal
                 state.deleteType = 'stableVersion';
                 state.deleteTarget = stableVersionId;
-                elements.confirmDeleteMessage.textContent = `Are you sure you want to delete the stable version "${version.name}"?`;
+                
+                const confirmDeleteMessage = document.getElementById('confirmDeleteMessage');
+                if (confirmDeleteMessage) {
+                    confirmDeleteMessage.textContent = `确定要删除稳定版本 "${stableVersion.name}" 吗？`;
+                }
                 
                 // Show modal
-                elements.confirmDeleteModal.classList.remove('hidden');
+                const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+                if (confirmDeleteModal) {
+                    confirmDeleteModal.style.display = 'flex';
+                }
             }
             
             function hideConfirmDeleteModal() {
-                elements.confirmDeleteModal.classList.add('hidden');
+                const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+                if (confirmDeleteModal) {
+                    confirmDeleteModal.style.display = 'none';
+                    confirmDeleteModal.classList.add('hidden');
+                }
             }
             
             function executeDelete() {
@@ -2434,6 +2732,8 @@
                     deleteStableVersion();
                 } else if (state.deleteType === 'model') {
                     deleteModel();
+                } else if (state.deleteType === 'apiConfig') {
+                    deleteApiConfig();
                 }
                 
                 // Hide modal
@@ -2566,6 +2866,904 @@
                 const stableVersionId = elements.stableVersionSelect.value;
                 elements.deleteStableVersionBtn.style.visibility = stableVersionId ? 'visible' : 'hidden';
             });
+
+            // New API Config Modal functions
+            function showApiConfigModal() {
+                console.log('Showing API config modal');
+                try {
+                    updateApiConfigsDisplay();
+                    if (elements.apiConfigModal) {
+                        elements.apiConfigModal.classList.remove('hidden');
+                        console.log('API config modal displayed');
+                    } else {
+                        console.error('API config modal element not found');
+                    }
+                } catch (error) {
+                    console.error('Error showing API config modal:', error);
+                    // 直接通过DOM查询找到元素
+                    try {
+                        const modal = document.getElementById('apiConfigModal');
+                        if (modal) {
+                            modal.classList.remove('hidden');
+                            console.log('API config modal displayed through direct DOM query');
+                        } else {
+                            console.error('API config modal not found in DOM');
+                        }
+                    } catch (e) {
+                        console.error('Error in fallback display:', e);
+                    }
+                }
+            }
+            
+            function hideApiConfigModal() {
+                console.log('Hiding API config modal');
+                try {
+                    if (elements.apiConfigModal) {
+                        elements.apiConfigModal.classList.add('hidden');
+                        console.log('API config modal hidden');
+                    } else {
+                        console.error('API config modal element not found');
+                    }
+                } catch (error) {
+                    console.error('Error hiding API config modal:', error);
+                    // 直接通过DOM查询找到元素
+                    try {
+                        const modal = document.getElementById('apiConfigModal');
+                        if (modal) {
+                            modal.classList.add('hidden');
+                            console.log('API config modal hidden through direct DOM query');
+                        }
+                    } catch (e) {
+                        console.error('Error in fallback hide:', e);
+                    }
+                }
+            }
+            
+            function showNewApiConfigModal() {
+                console.log('Showing new API config modal');
+                try {
+                    elements.newApiConfigName.value = '';
+                    elements.newApiConfigBaseUrl.value = '';
+                    elements.newApiConfigApiKey.value = '';
+                    elements.newModelInput.value = '';
+                    state.tempModels = []; // 清空临时模型列表
+                    updateTempModelsDisplay();
+                    
+                    if (elements.newApiConfigModal) {
+                        elements.newApiConfigModal.classList.remove('hidden');
+                        console.log('New API config modal displayed');
+                    } else {
+                        console.error('New API config modal element not found');
+                    }
+                } catch (error) {
+                    console.error('Error showing new API config modal:', error);
+                }
+            }
+            
+            function hideNewApiConfigModal() {
+                console.log('Hiding new API config modal');
+                try {
+                    if (elements.newApiConfigModal) {
+                        elements.newApiConfigModal.classList.add('hidden');
+                        console.log('New API config modal hidden');
+                    } else {
+                        console.error('New API config modal element not found');
+                    }
+                } catch (error) {
+                    console.error('Error hiding new API config modal:', error);
+                }
+            }
+            
+            function addModelToTempList() {
+                console.log('Adding model to temp list');
+                try {
+                    // 直接从DOM获取元素
+                    const newModelInput = document.getElementById('newModelInput');
+                    const modelName = newModelInput ? newModelInput.value.trim() : '';
+                    
+                    if (!modelName) {
+                        showToast('模型名称不能为空', 'error');
+                        return;
+                    }
+                    
+                    // 检查是否已存在该模型
+                    if (state.tempModels.includes(modelName)) {
+                        showToast('已添加该模型', 'error');
+                        return;
+                    }
+                    
+                    // 添加到临时列表
+                    state.tempModels.push(modelName);
+                    
+                    // 更新显示
+                    updateTempModelsDisplay();
+                    
+                    // 清空输入框
+                    if (newModelInput) {
+                        newModelInput.value = '';
+                    }
+                    
+                    console.log('Model added to temp list:', modelName);
+                } catch (error) {
+                    console.error('Error adding model to temp list:', error);
+                }
+            }
+            
+            function updateTempModelsDisplay() {
+                console.log('Updating temp models display');
+                try {
+                    // 直接从DOM获取元素
+                    const modelsContainer = document.getElementById('newApiConfigModelsContainer');
+                    if (!modelsContainer) {
+                        console.error('New API config models container not found in DOM');
+                        return;
+                    }
+                    
+                    // 清空当前显示
+                    modelsContainer.innerHTML = '';
+                    
+                    // 添加每个临时模型
+                    state.tempModels.forEach(model => {
+                        const modelItem = document.createElement('div');
+                        modelItem.className = 'flex justify-between items-center mb-1 p-1 border-b border-gray-200 dark:border-gray-700';
+                        
+                        const modelName = document.createElement('span');
+                        modelName.textContent = model;
+                        modelName.className = 'text-sm text-gray-700 dark:text-gray-300';
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                        removeBtn.className = 'text-red-500 hover:text-red-700';
+                        removeBtn.addEventListener('click', () => {
+                            // 从临时列表中移除
+                            state.tempModels = state.tempModels.filter(m => m !== model);
+                            updateTempModelsDisplay();
+                        });
+                        
+                        modelItem.appendChild(modelName);
+                        modelItem.appendChild(removeBtn);
+                        
+                        modelsContainer.appendChild(modelItem);
+                    });
+                    
+                    // 如果没有模型，显示提示
+                    if (state.tempModels.length === 0) {
+                        const emptyMsg = document.createElement('div');
+                        emptyMsg.textContent = '请添加至少一个模型';
+                        emptyMsg.className = 'text-sm text-gray-500 dark:text-gray-400 text-center p-2';
+                        modelsContainer.appendChild(emptyMsg);
+                    }
+                    
+                    console.log('Temp models display updated');
+                } catch (error) {
+                    console.error('Error updating temp models display:', error);
+                }
+            }
+            
+            function addNewApiConfig() {
+                console.log('Adding new API config');
+                try {
+                    // 直接从DOM获取元素
+                    const nameInput = document.getElementById('newApiConfigName');
+                    const baseURLInput = document.getElementById('newApiConfigBaseUrl');
+                    const apiKeyInput = document.getElementById('newApiConfigApiKey');
+                    
+                    if (!nameInput || !baseURLInput || !apiKeyInput) {
+                        console.error('Required form elements not found');
+                        showToast('表单元素未找到', 'error');
+                        return;
+                    }
+                    
+                    const name = nameInput.value.trim();
+                    const baseURL = baseURLInput.value.trim();
+                    const apiKey = apiKeyInput.value.trim();
+                    
+                    if (!name) {
+                        showToast('配置名称不能为空', 'error');
+                        return;
+                    }
+                    
+                    if (!baseURL) {
+                        showToast('Base URL不能为空', 'error');
+                        return;
+                    }
+                    
+                    if (!apiKey) {
+                        showToast('API Key不能为空', 'error');
+                        return;
+                    }
+                    
+                    if (state.tempModels.length === 0) {
+                        showToast('请至少添加一个模型', 'error');
+                        return;
+                    }
+                    
+                    // Check if config name already exists
+                    if (state.apiConfigs.some(config => config.name === name)) {
+                        showToast('已存在相同名称的配置', 'error');
+                        return;
+                    }
+                    
+                    // Create new config
+                    const newConfig = {
+                        id: generateId(),
+                        name,
+                        baseURL,
+                        apiKey,
+                        models: [...state.tempModels]
+                    };
+                    
+                    console.log('New config created:', newConfig.name);
+                    
+                    // Add to state
+                    state.apiConfigs.push(newConfig);
+                    
+                    // Update UI
+                    updateApiConfigsDisplay();
+                    updateModelSelects();
+                    
+                    // Save state
+                    saveState();
+                    
+                    // Hide modal
+                    const newApiConfigModal = document.getElementById('newApiConfigModal');
+                    if (newApiConfigModal) {
+                        newApiConfigModal.classList.add('hidden');
+                    }
+                    
+                    // Show toast
+                    showToast(`API配置 "${name}" 已添加`);
+                    
+                    console.log('New API config added successfully');
+                } catch (error) {
+                    console.error('Error adding new API config:', error);
+                    showToast('添加配置时出错', 'error');
+                }
+            }
+            
+            function showDeleteApiConfigConfirm(configId) {
+                // Find the config
+                const config = state.apiConfigs.find(c => c.id === configId);
+                if (!config) {
+                    showToast('API配置未找到', 'error');
+                    return;
+                }
+                
+                // Set up confirm delete modal
+                state.deleteType = 'apiConfig';
+                state.deleteTarget = configId;
+                const confirmDeleteMessage = document.getElementById('confirmDeleteMessage');
+                if (confirmDeleteMessage) {
+                    confirmDeleteMessage.textContent = `确定要删除API配置 "${config.name}" 吗？`;
+                }
+                
+                // Show modal
+                const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+                if (confirmDeleteModal) {
+                    confirmDeleteModal.style.display = 'flex';
+                }
+            }
+            
+            function deleteApiConfig() {
+                const configId = state.deleteTarget;
+                const configIndex = state.apiConfigs.findIndex(c => c.id === configId);
+                
+                if (configIndex === -1) {
+                    showToast('API配置未找到', 'error');
+                    return;
+                }
+                
+                // Get config name for the toast
+                const configName = state.apiConfigs[configIndex].name;
+                
+                // Remove config
+                state.apiConfigs.splice(configIndex, 1);
+                
+                // Update UI
+                updateApiConfigsDisplay();
+                updateModelSelects();
+                
+                // Save state
+                saveState();
+                
+                // Show toast
+                showToast(`API配置 "${configName}" 已删除`);
+            }
+
+            function updateApiConfigsDisplay() {
+                console.log('Updating API configs display');
+                try {
+                    // Clear current API configs
+                    if (elements.apiConfigsContainer) {
+                        elements.apiConfigsContainer.innerHTML = '';
+                        
+                        // Add each API config
+                        state.apiConfigs.forEach(config => {
+                            const configCard = document.createElement('div');
+                            configCard.className = 'border border-gray-200 dark:border-gray-700 rounded p-4 relative';
+                            
+                            const nameElement = document.createElement('h5');
+                            nameElement.className = 'font-medium text-gray-800 dark:text-gray-200 mb-2';
+                            nameElement.textContent = config.name;
+                            
+                            const baseUrlElement = document.createElement('div');
+                            baseUrlElement.className = 'text-sm text-gray-600 dark:text-gray-400 mb-1';
+                            baseUrlElement.textContent = `Base URL: ${config.baseURL}`;
+                            
+                            const apiKeyElement = document.createElement('div');
+                            apiKeyElement.className = 'text-sm text-gray-600 dark:text-gray-400 mb-1';
+                            apiKeyElement.textContent = `API Key: ${'•'.repeat(10)}`;
+                            
+                            const modelsElement = document.createElement('div');
+                            modelsElement.className = 'text-sm text-gray-600 dark:text-gray-400 mb-2';
+                            modelsElement.textContent = `模型: ${config.models.join(', ')}`;
+                            
+                            // 按钮容器
+                            const btnContainer = document.createElement('div');
+                            btnContainer.className = 'flex space-x-2';
+                            
+                            // 创建编辑按钮
+                            const editBtn = document.createElement('button');
+                            editBtn.className = 'btn-secondary text-sm mt-2';
+                            editBtn.textContent = '编辑';
+                            editBtn.addEventListener('click', () => {
+                                showEditApiConfigModal(config.id);
+                            });
+                            
+                            // 创建删除按钮
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.className = 'btn-danger text-sm mt-2';
+                            deleteBtn.textContent = '删除';
+                            deleteBtn.addEventListener('click', () => {
+                                showDeleteApiConfigConfirm(config.id);
+                            });
+                            
+                            // 添加按钮到按钮容器
+                            btnContainer.appendChild(editBtn);
+                            btnContainer.appendChild(deleteBtn);
+                            
+                            configCard.appendChild(nameElement);
+                            configCard.appendChild(baseUrlElement);
+                            configCard.appendChild(apiKeyElement);
+                            configCard.appendChild(modelsElement);
+                            configCard.appendChild(btnContainer);
+                            
+                            elements.apiConfigsContainer.appendChild(configCard);
+                        });
+                        
+                        console.log('API configs display updated');
+                    } else {
+                        console.error('API configs container element not found');
+                    }
+                } catch (error) {
+                    console.error('Error updating API configs display:', error);
+                }
+            }
+
+            // 确保新类别按钮在所有情况下都可以正常工作
+            const newCategoryBtn = document.getElementById('newCategoryBtn');
+            if (newCategoryBtn) {
+                newCategoryBtn.addEventListener('click', function() {
+                    console.log('New Category button clicked');
+                    const modal = document.getElementById('newCategoryModal');
+                    if (modal) {
+                        // 清空输入框
+                        const nameInput = document.getElementById('newCategoryName');
+                        if (nameInput) {
+                            nameInput.value = '';
+                        }
+                        modal.classList.remove('hidden');
+                    } else {
+                        console.error('New Category modal not found');
+                    }
+                });
+            }
+
+            const cancelNewCategoryBtn = document.getElementById('cancelNewCategoryBtn');
+            if (cancelNewCategoryBtn) {
+                cancelNewCategoryBtn.addEventListener('click', function() {
+                    console.log('Cancel New Category button clicked');
+                    const modal = document.getElementById('newCategoryModal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+
+            const saveNewCategoryBtn = document.getElementById('saveNewCategoryBtn');
+            if (saveNewCategoryBtn) {
+                saveNewCategoryBtn.addEventListener('click', function() {
+                    console.log('Save New Category button clicked');
+                    const nameInput = document.getElementById('newCategoryName');
+                    if (!nameInput) {
+                        console.error('Category name input not found');
+                        return;
+                    }
+
+                    const categoryName = nameInput.value.trim();
+                    
+                    if (!categoryName) {
+                        showToast('Category name cannot be empty', 'error');
+                        return;
+                    }
+                    
+                    // Check if category already exists
+                    if (state.categories.some(c => c.name === categoryName)) {
+                        showToast('A category with this name already exists', 'error');
+                        return;
+                    }
+                    
+                    // Create new category
+                    const newCategory = {
+                        id: generateId(),
+                        name: categoryName
+                    };
+                    
+                    // Add to state
+                    state.categories.push(newCategory);
+                    state.currentCategory = newCategory.id;
+                    state.currentPrompt = null;
+                    
+                    // Initialize prompts for this category
+                    state.prompts[newCategory.id] = [];
+                    
+                    // Update UI
+                    updateCategorySelect();
+                    updatePromptSelect();
+                    clearPromptEditor();
+                    
+                    // Save state
+                    saveState();
+                    
+                    // Hide modal
+                    const modal = document.getElementById('newCategoryModal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                    
+                    // Show toast
+                    showToast(`Category "${categoryName}" created`);
+                });
+            }
+
+            // 修复API配置弹窗的按钮
+            // 关闭API配置弹窗按钮
+            const closeApiConfigBtn = document.getElementById('closeApiConfigBtn');
+            if (closeApiConfigBtn) {
+                closeApiConfigBtn.addEventListener('click', function() {
+                    console.log('Close API Config button clicked');
+                    const modal = document.getElementById('apiConfigModal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+
+            // 添加新API配置按钮
+            const addApiConfigBtn = document.getElementById('addApiConfigBtn');
+            if (addApiConfigBtn) {
+                addApiConfigBtn.addEventListener('click', function() {
+                    console.log('Add API Config button clicked');
+                    const newApiConfigModal = document.getElementById('newApiConfigModal');
+                    if (newApiConfigModal) {
+                        // 清空表单
+                        const nameInput = document.getElementById('newApiConfigName');
+                        const baseUrlInput = document.getElementById('newApiConfigBaseUrl');
+                        const apiKeyInput = document.getElementById('newApiConfigApiKey');
+                        const modelInputContainer = document.querySelector('#newApiConfigModal .flex.items-center.space-x-2');
+                        
+                        if (nameInput) nameInput.value = '';
+                        if (baseUrlInput) baseUrlInput.value = '';
+                        if (apiKeyInput) apiKeyInput.value = '';
+                        
+                        // 更新模型输入区域，添加刷新按钮
+                        if (modelInputContainer) {
+                            modelInputContainer.outerHTML = newApiConfigModelInputHTML;
+                            
+                            // 重新绑定事件
+                            const addModelToConfigBtn = document.getElementById('addModelToConfigBtn');
+                            if (addModelToConfigBtn) {
+                                addModelToConfigBtn.addEventListener('click', addModelToTempList);
+                            }
+                            
+                            const refreshNewModelsBtn = document.getElementById('refreshNewModelsBtn');
+                            if (refreshNewModelsBtn) {
+                                refreshNewModelsBtn.addEventListener('click', fetchModelsForNew);
+                            }
+                        }
+                        
+                        // 清空临时模型列表
+                        state.tempModels = [];
+                        updateTempModelsDisplay();
+                        
+                        // 显示弹窗
+                        newApiConfigModal.classList.remove('hidden');
+                    } else {
+                        console.error('New API Config modal not found');
+                    }
+                });
+            }
+
+            // 在newApiConfigModal和editApiConfigModal的模型输入区添加刷新按钮
+            const newApiConfigModelInputHTML = `
+            <div class="flex items-center space-x-2">
+                <input id="newModelInput" type="text" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200" placeholder="输入模型名称，如 gpt-3.5-turbo">
+                <button id="addModelToConfigBtn" class="btn-outline">添加</button>
+                <button id="refreshNewModelsBtn" class="btn-outline p-2 ml-1" title="自动获取模型列表">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            `;
+
+            // 在DOMContentLoaded结束前添加代码
+            // 添加获取模型列表功能
+            function fetchModelsForNew() {
+                const baseUrlInput = document.getElementById('newApiConfigBaseUrl');
+                const apiKeyInput = document.getElementById('newApiConfigApiKey');
+
+                if (!baseUrlInput || !apiKeyInput) {
+                    showToast('找不到必要的输入字段', 'error');
+                    return;
+                }
+
+                const baseURL = baseUrlInput.value.trim();
+                const apiKey = apiKeyInput.value.trim();
+
+                if (!baseURL || !apiKey) {
+                    showToast('请先填写Base URL和API Key', 'error');
+                    return;
+                }
+
+                fetchModelsList(baseURL, apiKey, (models) => {
+                    // 清空并添加新的模型
+                    state.tempModels = models;
+                    updateTempModelsDisplay();
+                    showToast('成功获取模型列表', 'success');
+                });
+            }
+
+            function fetchModelsForEdit() {
+                const baseUrlInput = document.getElementById('editApiConfigBaseUrl');
+                const apiKeyInput = document.getElementById('editApiConfigApiKey');
+
+                if (!baseUrlInput || !apiKeyInput) {
+                    showToast('找不到必要的输入字段', 'error');
+                    return;
+                }
+
+                const baseURL = baseUrlInput.value.trim();
+                const apiKey = apiKeyInput.value.trim();
+
+                if (!baseURL || !apiKey) {
+                    showToast('请先填写Base URL和API Key', 'error');
+                    return;
+                }
+
+                fetchModelsList(baseURL, apiKey, (models) => {
+                    // 清空并添加新的模型
+                    state.editTempModels = models;
+                    updateEditTempModelsDisplay();
+                    showToast('成功获取模型列表', 'success');
+                });
+            }
+
+            // 通用函数，获取模型列表
+            async function fetchModelsList(baseURL, apiKey, callback) {
+                try {
+                    // 显示加载状态
+                    showToast('正在获取模型列表...', 'info');
+                    
+                    const endpoint = `${baseURL}/models`;
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error?.message || `获取模型列表失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.data || !Array.isArray(data.data)) {
+                        throw new Error('获取到的模型数据格式不正确');
+                    }
+                    
+                    // 提取模型ID
+                    const models = data.data
+                        .filter(model => model.id && typeof model.id === 'string')
+                        .map(model => model.id)
+                        // 过滤掉一些非文本生成模型
+                        .filter(id => !id.includes('embedding') && !id.includes('search'));
+                    
+                    if (callback && typeof callback === 'function') {
+                        callback(models);
+                    }
+                    
+                    return models;
+                } catch (error) {
+                    console.error('获取模型列表失败:', error);
+                    showToast(`获取模型列表失败: ${error.message}`, 'error');
+                    return [];
+                }
+            }
+
+            // 显示编辑API配置模态框
+            function showEditApiConfigModal(configId) {
+                console.log('Showing edit API config modal for ID:', configId);
+                // 找到配置
+                const config = state.apiConfigs.find(c => c.id === configId);
+                if (!config) {
+                    showToast('API配置未找到', 'error');
+                    return;
+                }
+                
+                // 获取DOM元素
+                const modal = document.getElementById('editApiConfigModal');
+                const nameInput = document.getElementById('editApiConfigName');
+                const baseUrlInput = document.getElementById('editApiConfigBaseUrl');
+                const apiKeyInput = document.getElementById('editApiConfigApiKey');
+                const idInput = document.getElementById('editApiConfigId');
+                
+                if (!modal || !nameInput || !baseUrlInput || !apiKeyInput || !idInput) {
+                    console.error('编辑模态框元素未找到', {modal, nameInput, baseUrlInput, apiKeyInput, idInput});
+                    showToast('页面元素未找到', 'error');
+                    return;
+                }
+                
+                // 填充当前值
+                nameInput.value = config.name || '';
+                baseUrlInput.value = config.baseURL || '';
+                apiKeyInput.value = config.apiKey || '';
+                idInput.value = config.id || '';
+                
+                // 清空并填充模型列表
+                state.editTempModels = [...(config.models || [])];
+                updateEditTempModelsDisplay();
+                
+                // 显示模态框
+                modal.classList.remove('hidden');
+                
+                // 设置按钮事件
+                const addModelToEditBtn = document.getElementById('addModelToEditBtn');
+                const cancelEditApiConfigBtn = document.getElementById('cancelEditApiConfigBtn');
+                const saveEditApiConfigBtn = document.getElementById('saveEditApiConfigBtn');
+                const refreshModelsBtn = document.getElementById('refreshModelsBtn');
+                
+                // 添加模型按钮
+                if (addModelToEditBtn) {
+                    // 先移除之前的事件监听器
+                    const newAddModelToEditBtn = addModelToEditBtn.cloneNode(true);
+                    addModelToEditBtn.parentNode.replaceChild(newAddModelToEditBtn, addModelToEditBtn);
+                    newAddModelToEditBtn.addEventListener('click', addModelToEditList);
+                }
+                
+                // 取消按钮
+                if (cancelEditApiConfigBtn) {
+                    const newCancelEditApiConfigBtn = cancelEditApiConfigBtn.cloneNode(true);
+                    cancelEditApiConfigBtn.parentNode.replaceChild(newCancelEditApiConfigBtn, cancelEditApiConfigBtn);
+                    newCancelEditApiConfigBtn.addEventListener('click', hideEditApiConfigModal);
+                }
+                
+                // 保存按钮
+                if (saveEditApiConfigBtn) {
+                    const newSaveEditApiConfigBtn = saveEditApiConfigBtn.cloneNode(true);
+                    saveEditApiConfigBtn.parentNode.replaceChild(newSaveEditApiConfigBtn, saveEditApiConfigBtn);
+                    newSaveEditApiConfigBtn.addEventListener('click', saveEditApiConfig);
+                }
+                
+                // 刷新模型按钮
+                if (refreshModelsBtn) {
+                    const newRefreshModelsBtn = refreshModelsBtn.cloneNode(true);
+                    refreshModelsBtn.parentNode.replaceChild(newRefreshModelsBtn, refreshModelsBtn);
+                    newRefreshModelsBtn.addEventListener('click', fetchModelsForEdit);
+                }
+            }
+
+            // 隐藏编辑API配置模态框
+            function hideEditApiConfigModal() {
+                const modal = document.getElementById('editApiConfigModal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                }
+            }
+
+            // 更新编辑中的临时模型显示
+            function updateEditTempModelsDisplay() {
+                const modelsContainer = document.getElementById('editApiConfigModelsContainer');
+                if (!modelsContainer) {
+                    console.error('编辑API配置模型容器未找到');
+                    return;
+                }
+                
+                // 清空当前显示
+                modelsContainer.innerHTML = '';
+                
+                // 添加每个临时模型
+                state.editTempModels.forEach(model => {
+                    const modelItem = document.createElement('div');
+                    modelItem.className = 'flex justify-between items-center mb-1 p-1 border-b border-gray-200 dark:border-gray-700';
+                    
+                    const modelName = document.createElement('span');
+                    modelName.textContent = model;
+                    modelName.className = 'text-sm text-gray-700 dark:text-gray-300';
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    removeBtn.className = 'text-red-500 hover:text-red-700';
+                    removeBtn.addEventListener('click', () => {
+                        // 从临时列表中移除
+                        state.editTempModels = state.editTempModels.filter(m => m !== model);
+                        updateEditTempModelsDisplay();
+                    });
+                    
+                    modelItem.appendChild(modelName);
+                    modelItem.appendChild(removeBtn);
+                    
+                    modelsContainer.appendChild(modelItem);
+                });
+                
+                // 如果没有模型，显示提示
+                if (state.editTempModels.length === 0) {
+                    const emptyMsg = document.createElement('div');
+                    emptyMsg.textContent = '请添加至少一个模型';
+                    emptyMsg.className = 'text-sm text-gray-500 dark:text-gray-400 text-center p-2';
+                    modelsContainer.appendChild(emptyMsg);
+                }
+            }
+
+            // 添加模型到编辑列表
+            function addModelToEditList() {
+                const modelInput = document.getElementById('editModelInput');
+                if (!modelInput) {
+                    console.error('编辑模型输入框未找到');
+                    return;
+                }
+                
+                const modelName = modelInput.value.trim();
+                if (!modelName) {
+                    showToast('模型名称不能为空', 'error');
+                    return;
+                }
+                
+                // 检查是否已存在该模型
+                if (state.editTempModels.includes(modelName)) {
+                    showToast('已添加该模型', 'error');
+                    return;
+                }
+                
+                // 添加到临时列表
+                state.editTempModels.push(modelName);
+                
+                // 更新显示
+                updateEditTempModelsDisplay();
+                
+                // 清空输入框
+                modelInput.value = '';
+            }
+
+            // 保存编辑后的API配置
+            function saveEditApiConfig() {
+                const nameInput = document.getElementById('editApiConfigName');
+                const baseUrlInput = document.getElementById('editApiConfigBaseUrl');
+                const apiKeyInput = document.getElementById('editApiConfigApiKey');
+                const idInput = document.getElementById('editApiConfigId');
+                
+                if (!nameInput || !baseUrlInput || !apiKeyInput || !idInput) {
+                    console.error('必要的编辑表单元素未找到');
+                    showToast('表单元素未找到', 'error');
+                    return;
+                }
+                
+                const configId = idInput.value.trim();
+                const name = nameInput.value.trim();
+                const baseURL = baseUrlInput.value.trim();
+                const apiKey = apiKeyInput.value.trim();
+                
+                if (!name) {
+                    showToast('配置名称不能为空', 'error');
+                    return;
+                }
+                
+                if (!baseURL) {
+                    showToast('Base URL不能为空', 'error');
+                    return;
+                }
+                
+                if (!apiKey) {
+                    showToast('API Key不能为空', 'error');
+                    return;
+                }
+                
+                if (state.editTempModels.length === 0) {
+                    showToast('请至少添加一个模型', 'error');
+                    return;
+                }
+                
+                // 检查配置名称是否已存在(排除当前编辑的配置)
+                if (state.apiConfigs.some(config => config.name === name && config.id !== configId)) {
+                    showToast('已存在相同名称的配置', 'error');
+                    return;
+                }
+                
+                // 找到配置并更新
+                const configIndex = state.apiConfigs.findIndex(c => c.id === configId);
+                if (configIndex === -1) {
+                    showToast('未找到要编辑的API配置', 'error');
+                    return;
+                }
+                
+                // 更新配置
+                state.apiConfigs[configIndex] = {
+                    ...state.apiConfigs[configIndex],
+                    name,
+                    baseURL,
+                    apiKey,
+                    models: [...state.editTempModels]
+                };
+                
+                // 更新UI
+                updateApiConfigsDisplay();
+                updateModelSelects();
+                
+                // 保存状态
+                saveState();
+                
+                // 隐藏模态框
+                hideEditApiConfigModal();
+                
+                // 显示提示
+                showToast(`API配置 "${name}" 已更新`);
+            }
+
+            function bindConfirmDeleteButtons() {
+                // 确认删除按钮
+                const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+                if (confirmDeleteButton) {
+                    confirmDeleteButton.addEventListener('click', () => {
+                        if (state.deleteType === 'category') {
+                            deleteCategory();
+                        } else if (state.deleteType === 'prompt') {
+                            deletePrompt();
+                        } else if (state.deleteType === 'stableVersion') {
+                            deleteStableVersion();
+                        } else if (state.deleteType === 'apiConfig') {
+                            deleteApiConfig();
+                        }
+                        hideConfirmDeleteModal();
+                    });
+                }
+
+                // 取消删除按钮
+                const cancelDeleteButton = document.getElementById('cancelDeleteButton');
+                if (cancelDeleteButton) {
+                    cancelDeleteButton.addEventListener('click', hideConfirmDeleteModal);
+                }
+                
+                // 点击模态框背景关闭
+                const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+                if (confirmDeleteModal) {
+                    confirmDeleteModal.addEventListener('click', (e) => {
+                        if (e.target === confirmDeleteModal) {
+                            hideConfirmDeleteModal();
+                        }
+                    });
+                }
+            }
+
+            function bindEditApiConfigButtons() {
+                const editButtons = document.querySelectorAll('.edit-api-config-button');
+                editButtons.forEach(button => {
+                    const configId = button.getAttribute('data-id');
+                    button.addEventListener('click', () => {
+                        showEditApiConfigModal(configId);
+                    });
+                });
+            }
         });
     </script>
 </body>
