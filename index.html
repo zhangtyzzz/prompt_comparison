@@ -862,13 +862,17 @@
             } else {
                 console.error('API Config button not found!');
             }
-            
+
             // State management
             const state = {
                 models: [],
                 tempModels: [],
                 editTempModels: [], // 添加编辑时的临时模型数组
                 apiConfigs: [],
+                categories: [], // 初始化categories为空数组
+                prompts: {}, // 初始化prompts为空对象
+                currentCategory: null,
+                currentPrompt: null,
                 selectedSourceCategory: null,
                 selectedTargetCategory: null,
                 promptCategoryItems: {}
